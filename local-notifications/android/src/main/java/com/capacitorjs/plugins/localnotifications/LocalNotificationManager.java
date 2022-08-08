@@ -367,7 +367,13 @@ public class LocalNotificationManager {
         // Cron like scheduler
         DateMatch on = schedule.getOn();
         if (on != null) {
-            long trigger = on.nextTrigger(new Date());
+            long trigger;
+            Date after = schedule.getAfter();
+            if (after != null) {
+                trigger = on.nextTrigger(after);
+            } else {
+                trigger = on.nextTrigger(new Date());
+            }
             notificationIntent.putExtra(TimedNotificationPublisher.CRON_KEY, on.toMatchString());
             pendingIntent = PendingIntent.getBroadcast(context, request.getId(), notificationIntent, flags);
             setExactIfPossible(alarmManager, schedule, trigger, pendingIntent);

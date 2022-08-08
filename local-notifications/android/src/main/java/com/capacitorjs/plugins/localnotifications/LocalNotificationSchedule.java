@@ -17,6 +17,7 @@ public class LocalNotificationSchedule {
     private Integer count;
 
     private DateMatch on;
+    private Date after;
 
     private Boolean whileIdle;
 
@@ -58,7 +59,7 @@ public class LocalNotificationSchedule {
         }
     }
 
-    private void buildOnElement(JSObject schedule) {
+    private void buildOnElement(JSObject schedule) throws ParseException {
         JSObject onJson = schedule.getJSObject("on");
         if (onJson != null) {
             this.on = new DateMatch();
@@ -69,6 +70,12 @@ public class LocalNotificationSchedule {
             on.setHour(onJson.getInteger("hour"));
             on.setMinute(onJson.getInteger("minute"));
             on.setSecond(onJson.getInteger("second"));
+        }
+        String dateString = schedule.getString("after");
+        if (dateString != null) {
+            SimpleDateFormat sdf = new SimpleDateFormat(JS_DATE_FORMAT);
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            this.after = sdf.parse(dateString);
         }
     }
 
@@ -82,6 +89,14 @@ public class LocalNotificationSchedule {
 
     public void setOn(DateMatch on) {
         this.on = on;
+    }
+
+    public Date getAfter() {
+        return after;
+    }
+
+    public void setAfter(Date after) {
+        this.after = after;
     }
 
     public Date getAt() {

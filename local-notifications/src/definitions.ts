@@ -789,6 +789,14 @@ export interface Schedule {
   on?: ScheduleOn;
 
   /**
+   * Schedule a notification at an interval that starts after a particular date
+   * specified by `on`.
+   *
+   * @since 1.0.1
+   */
+  after?: Date;
+
+  /**
    * Schedule a notification on a particular interval.
    *
    * @since 1.0.0
