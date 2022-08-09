@@ -310,6 +310,7 @@ public class LocalNotification {
             if (schedule != null) {
                 JSObject jsSchedule = new JSObject();
                 jsSchedule.put("at", schedule.getAt());
+                jsSchedule.put("after", schedule.getAfter());
                 jsSchedule.put("every", schedule.getEvery());
                 jsSchedule.put("count", schedule.getCount());
                 jsSchedule.put("on", schedule.getOnObj());
