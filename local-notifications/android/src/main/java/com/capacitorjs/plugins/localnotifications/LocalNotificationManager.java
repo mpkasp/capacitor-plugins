@@ -396,7 +396,7 @@ public class LocalNotificationManager {
             }
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && schedule.allowWhileIdle()) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC, trigger, pendingIntent);
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pendingIntent);
             } else {
                 alarmManager.setExact(AlarmManager.RTC, trigger, pendingIntent);
             }
