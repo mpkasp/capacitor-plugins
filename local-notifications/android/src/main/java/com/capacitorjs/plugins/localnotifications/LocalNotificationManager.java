@@ -13,6 +13,8 @@ import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -40,6 +42,7 @@ public class LocalNotificationManager {
     private static int defaultSmallIconID = AssetUtil.RESOURCE_ID_ZERO_VALUE;
     // Action constants
     public static final String NOTIFICATION_INTENT_KEY = "LocalNotificationId";
+    public static final String NOTIFICATION_SCHEDULE_ID_INTENT_KEY = "LocalNotificationScheduleId";
     public static final String NOTIFICATION_OBJ_INTENT_KEY = "LocalNotficationObject";
     public static final String ACTION_INTENT_KEY = "LocalNotificationUserAction";
     public static final String NOTIFICATION_IS_REMOVABLE_KEY = "LocalNotificationRepeating";
@@ -235,7 +238,6 @@ public class LocalNotificationManager {
         }
 
         createActionIntents(localNotification, mBuilder);
-        // notificationId is a unique int for each localNotification that you must define
         Notification buildNotification = mBuilder.build();
         if (localNotification.isScheduled()) {
             triggerScheduledNotification(buildNotification, localNotification);
@@ -244,7 +246,7 @@ public class LocalNotificationManager {
                 JSObject notificationJson = new JSObject(localNotification.getSource());
                 LocalNotificationsPlugin.fireReceived(notificationJson);
             } catch (JSONException e) {}
-            notificationManager.notify(localNotification.getId(), buildNotification);
+            notificationManager.notify(localNotification.getNotifyId(), buildNotification);
         }
     }
 
@@ -289,6 +291,7 @@ public class LocalNotificationManager {
         Intent dissmissIntent = new Intent(context, NotificationDismissReceiver.class);
         dissmissIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         dissmissIntent.putExtra(NOTIFICATION_INTENT_KEY, localNotification.getId());
+        dissmissIntent.putExtra(NOTIFICATION_SCHEDULE_ID_INTENT_KEY, localNotification.getNotifyId());
         dissmissIntent.putExtra(ACTION_INTENT_KEY, "dismiss");
         LocalNotificationSchedule schedule = localNotification.getSchedule();
         dissmissIntent.putExtra(NOTIFICATION_IS_REMOVABLE_KEY, schedule == null || schedule.isRemovable());
@@ -313,6 +316,7 @@ public class LocalNotificationManager {
         intent.addCategory(Intent.CATEGORY_LAUNCHER);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         intent.putExtra(NOTIFICATION_INTENT_KEY, localNotification.getId());
+        intent.putExtra(NOTIFICATION_SCHEDULE_ID_INTENT_KEY, localNotification.getNotifyId());
         intent.putExtra(ACTION_INTENT_KEY, action);
         intent.putExtra(NOTIFICATION_OBJ_INTENT_KEY, localNotification.getSource());
         LocalNotificationSchedule schedule = localNotification.getSchedule();
@@ -330,6 +334,7 @@ public class LocalNotificationManager {
         LocalNotificationSchedule schedule = request.getSchedule();
         Intent notificationIntent = new Intent(context, TimedNotificationPublisher.class);
         notificationIntent.putExtra(NOTIFICATION_INTENT_KEY, request.getId());
+        notificationIntent.putExtra(NOTIFICATION_SCHEDULE_ID_INTENT_KEY, request.getNotifyId());
         notificationIntent.putExtra(TimedNotificationPublisher.NOTIFICATION_KEY, notification);
         int flags = PendingIntent.FLAG_CANCEL_CURRENT;
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
