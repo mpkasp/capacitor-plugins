@@ -817,6 +817,14 @@ export interface Schedule {
    * @since 1.0.0
    */
   count?: number;
+
+  /**
+   * First date in which the  notification interval will be calculated from
+   * specified by `every` and `count`.
+   *
+   * @since 1.0.2
+   */
+  startAt?: Date;
 }
 
 export interface ScheduleOn {

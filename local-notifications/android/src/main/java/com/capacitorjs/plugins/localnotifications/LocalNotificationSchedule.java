@@ -18,6 +18,7 @@ public class LocalNotificationSchedule {
 
     private DateMatch on;
     private Date after;
+    private Date startAt;
 
     private Boolean whileIdle;
 
@@ -40,9 +41,15 @@ public class LocalNotificationSchedule {
 
     public LocalNotificationSchedule() {}
 
-    private void buildEveryElement(JSObject schedule) {
+    private void buildEveryElement(JSObject schedule) throws ParseException {
         // 'year'|'month'|'two-weeks'|'week'|'day'|'hour'|'minute'|'second';
         this.every = schedule.getString("every");
+        String dateString = schedule.getString("startAt");
+        if (dateString != null) {
+            SimpleDateFormat sdf = new SimpleDateFormat(JS_DATE_FORMAT);
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            this.startAt = sdf.parse(dateString);
+        }
     }
 
     private void buildCountElement(JSObject schedule) {
@@ -97,6 +104,14 @@ public class LocalNotificationSchedule {
 
     public void setAfter(Date after) {
         this.after = after;
+    }
+
+    public Date getStartAt() {
+        return startAt;
+    }
+
+    public void setStartAt(Date startAt) {
+        this.startAt = startAt;
     }
 
     public Date getAt() {

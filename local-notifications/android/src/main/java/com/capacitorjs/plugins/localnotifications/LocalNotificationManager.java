@@ -363,7 +363,17 @@ public class LocalNotificationManager {
         if (every != null) {
             Long everyInterval = schedule.getEveryInterval();
             if (everyInterval != null) {
-                long startTime = new Date().getTime() + everyInterval;
+                Date startAt = schedule.getStartAt();
+                if (startAt == null) {
+                    startAt = new Date();
+                }
+                // If start at is old, dont trigger old notifications
+                long startTime = startAt.getTime() + everyInterval;
+                long today = new Date().getTime();
+                while (startTime < today) {
+                    startTime += everyInterval;
+                }
+                Log.d("LN", "Scheduling every notification with start at: " + startAt + "; and startTime: " + startTime + "; inverval: " + everyInterval);
                 alarmManager.setRepeating(AlarmManager.RTC, startTime, everyInterval, pendingIntent);
             }
             return;
