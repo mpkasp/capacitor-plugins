@@ -542,11 +542,18 @@ export interface LocalNotificationSchema {
    */
   summaryText?: string;
   /**
-   * The notification identifier.
+   * The local notification identifier.
    *
    * @since 1.0.0
    */
   id: number;
+
+  /**
+   * The schedule identifier, to be used if you want to schedule a notification to trigger more than once. If not provided, will use id.
+   *
+   * @since 1.0.0
+   */
+  scheduleId?: number;
 
   /**
    * Schedule this notification for a later time.
@@ -810,6 +817,14 @@ export interface Schedule {
    * @since 1.0.0
    */
   count?: number;
+
+  /**
+   * First date in which the  notification interval will be calculated from
+   * specified by `every` and `count`.
+   *
+   * @since 1.0.2
+   */
+  startAt?: Date;
 }
 
 export interface ScheduleOn {

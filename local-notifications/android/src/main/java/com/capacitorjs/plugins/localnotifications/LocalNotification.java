@@ -26,6 +26,7 @@ public class LocalNotification {
     private String largeBody;
     private String summaryText;
     private Integer id;
+    private Integer scheduleId;
     private String sound;
     private String smallIcon;
     private String largeIcon;
@@ -171,6 +172,14 @@ public class LocalNotification {
         this.id = id;
     }
 
+    public Integer getScheduleId() {
+        return scheduleId;
+    }
+
+    public void setScheduleId(Integer id) {
+        this.scheduleId = id;
+    }
+
     public boolean isGroupSummary() {
         return groupSummary;
     }
@@ -203,6 +212,9 @@ public class LocalNotification {
         this.channelId = channelId;
     }
 
+    public int getNotifyId() {
+        return this.scheduleId != null ? this.scheduleId : this.id;
+    }
     /**
      * Build list of the notifications from remote plugin call
      */
@@ -245,6 +257,7 @@ public class LocalNotification {
         LocalNotification localNotification = new LocalNotification();
         localNotification.setSource(jsonObject.toString());
         localNotification.setId(jsonObject.getInteger("id"));
+        localNotification.setScheduleId(jsonObject.getInteger("scheduleId"));
         localNotification.setBody(jsonObject.getString("body"));
         localNotification.setLargeBody(jsonObject.getString("largeBody"));
         localNotification.setSummaryText(jsonObject.getString("summaryText"));
@@ -409,6 +422,7 @@ public class LocalNotification {
         if (body != null ? !body.equals(that.body) : that.body != null) return false;
         if (largeBody != null ? !largeBody.equals(that.largeBody) : that.largeBody != null) return false;
         if (id != null ? !id.equals(that.id) : that.id != null) return false;
+        if (scheduleId != null ? !scheduleId.equals(that.scheduleId) : that.scheduleId != null) return false;
         if (sound != null ? !sound.equals(that.sound) : that.sound != null) return false;
         if (smallIcon != null ? !smallIcon.equals(that.smallIcon) : that.smallIcon != null) return false;
         if (largeIcon != null ? !largeIcon.equals(that.largeIcon) : that.largeIcon != null) return false;
@@ -429,6 +443,7 @@ public class LocalNotification {
         int result = title != null ? title.hashCode() : 0;
         result = 31 * result + (body != null ? body.hashCode() : 0);
         result = 31 * result + (id != null ? id.hashCode() : 0);
+        result = 31 * result + (scheduleId != null ? scheduleId.hashCode() : 0);
         result = 31 * result + (sound != null ? sound.hashCode() : 0);
         result = 31 * result + (smallIcon != null ? smallIcon.hashCode() : 0);
         result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
