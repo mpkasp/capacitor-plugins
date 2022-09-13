@@ -1,9 +1,7 @@
 package com.capacitorjs.plugins.googlemaps
 
 import android.annotation.SuppressLint
-import android.graphics.Color
-import android.graphics.Rect
-import android.graphics.RectF
+import android.graphics.*
 import android.location.Location
 import android.util.Log
 import android.view.MotionEvent
@@ -18,10 +16,7 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.GoogleMap.*
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
-import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.*
 import com.google.maps.android.clustering.Cluster
 import com.google.maps.android.clustering.ClusterManager
 import kotlinx.coroutines.CoroutineScope
@@ -42,10 +37,12 @@ class CapacitorGoogleMap(
         OnMapReadyCallback,
         OnMapClickListener,
         OnMarkerClickListener,
+        OnMarkerDragListener,
         OnInfoWindowClickListener {
     private var mapView: MapView
     private var googleMap: GoogleMap? = null
     private val markers = HashMap<String, CapacitorGoogleMapMarker>()
+    private val markerIcons = HashMap<String, BitmapDescriptor>()
     private var clusterManager: ClusterManager<CapacitorGoogleMapMarker>? = null
 
     private val isReadyChannel = Channel<Boolean>()
@@ -171,7 +168,8 @@ class CapacitorGoogleMap(
 
             CoroutineScope(Dispatchers.Main).launch {
                 newMarkers.forEach {
-                    val googleMapMarker = googleMap?.addMarker(it.getMarkerOptions())
+                    val markerOptions = this@CapacitorGoogleMap.buildMarker(it)
+                    val googleMapMarker = googleMap?.addMarker(markerOptions)
                     it.googleMapMarker = googleMapMarker
 
                     if (clusterManager != null) {
@@ -201,7 +199,8 @@ class CapacitorGoogleMap(
             var markerId: String
 
             CoroutineScope(Dispatchers.Main).launch {
-                val googleMapMarker = googleMap?.addMarker(marker.getMarkerOptions())
+                val markerOptions = this@CapacitorGoogleMap.buildMarker(marker)
+                val googleMapMarker = googleMap?.addMarker(markerOptions)
 
                 if (clusterManager == null) {
                     marker.googleMapMarker = googleMapMarker
@@ -275,7 +274,8 @@ class CapacitorGoogleMap(
                 // add existing markers back to the map
                 if (markers.isNotEmpty()) {
                     for ((_, marker) in markers) {
-                        val googleMapMarker = googleMap?.addMarker(marker.getMarkerOptions())
+                        val markerOptions = this@CapacitorGoogleMap.buildMarker(marker)
+                        val googleMapMarker = googleMap?.addMarker(markerOptions)
                         marker.googleMapMarker = googleMapMarker
                     }
                 }
@@ -525,6 +525,49 @@ class CapacitorGoogleMap(
         )
     }
 
+    private fun buildMarker(marker: CapacitorGoogleMapMarker): MarkerOptions {
+        val markerOptions = MarkerOptions()
+        markerOptions.position(marker.coordinate)
+        markerOptions.title(marker.title)
+        markerOptions.snippet(marker.snippet)
+        markerOptions.alpha(marker.opacity)
+        markerOptions.flat(marker.isFlat)
+        markerOptions.draggable(marker.draggable)
+
+        if (!marker.iconUrl.isNullOrEmpty()) {
+            if (this.markerIcons.contains(marker.iconUrl)) {
+                val cachedIcon = this.markerIcons[marker.iconUrl]
+                markerOptions.icon(cachedIcon)
+            } else {
+                try {
+                    val stream = this.delegate.context.assets.open("public/${marker.iconUrl}")
+                    var bitmap = BitmapFactory.decodeStream(stream)
+
+                    if (marker.iconSize != null) {
+                        bitmap = Bitmap.createScaledBitmap(bitmap, (marker.iconSize!!.width * this.config.devicePixelRatio).toInt(), (marker.iconSize!!.height * this.config.devicePixelRatio).toInt(), false)
+                    }
+
+                    val icon = BitmapDescriptorFactory.fromBitmap(bitmap)
+                    this.markerIcons[marker.iconUrl!!] = icon
+                    markerOptions.icon(icon)
+                } catch(e: Exception) {
+                    var detailedMessage = "${e.javaClass} - ${e.localizedMessage}"
+                    if (marker.iconUrl!!.endsWith(".svg")) {
+                        detailedMessage = "SVG not supported"
+                    }
+
+                    Log.w("CapacitorGoogleMaps", "Could not load image '${marker.iconUrl}': ${detailedMessage}. Using default marker icon.")
+                }
+            }
+        } else {
+            if (marker.colorHue != null) {
+                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(marker.colorHue!!))
+            }
+        }
+
+        return markerOptions
+    }
+
     fun onStart() {
         mapView.onStart()
     }
@@ -566,6 +609,7 @@ class CapacitorGoogleMap(
                     this@CapacitorGoogleMap
             )
             this@CapacitorGoogleMap.googleMap?.setOnMarkerClickListener(this@CapacitorGoogleMap)
+            this@CapacitorGoogleMap.googleMap?.setOnMarkerDragListener(this@CapacitorGoogleMap)
             this@CapacitorGoogleMap.googleMap?.setOnMapClickListener(this@CapacitorGoogleMap)
             this@CapacitorGoogleMap.googleMap?.setOnMyLocationButtonClickListener(
                     this@CapacitorGoogleMap
@@ -647,6 +691,39 @@ class CapacitorGoogleMap(
         data.put("snippet", marker.snippet)
         delegate.notify("onMarkerClick", data)
         return false
+    }
+
+    override fun onMarkerDrag(marker: Marker) {
+        val data = JSObject()
+        data.put("mapId", this@CapacitorGoogleMap.id)
+        data.put("markerId", marker.id)
+        data.put("latitude", marker.position.latitude)
+        data.put("longitude", marker.position.longitude)
+        data.put("title", marker.title)
+        data.put("snippet", marker.snippet)
+        delegate.notify("onMarkerDrag", data)
+    }
+
+    override fun onMarkerDragStart(marker: Marker) {
+        val data = JSObject()
+        data.put("mapId", this@CapacitorGoogleMap.id)
+        data.put("markerId", marker.id)
+        data.put("latitude", marker.position.latitude)
+        data.put("longitude", marker.position.longitude)
+        data.put("title", marker.title)
+        data.put("snippet", marker.snippet)
+        delegate.notify("onMarkerDragStart", data)
+    }
+
+    override fun onMarkerDragEnd(marker: Marker) {
+        val data = JSObject()
+        data.put("mapId", this@CapacitorGoogleMap.id)
+        data.put("markerId", marker.id)
+        data.put("latitude", marker.position.latitude)
+        data.put("longitude", marker.position.longitude)
+        data.put("title", marker.title)
+        data.put("snippet", marker.snippet)
+        delegate.notify("onMarkerDragEnd", data)
     }
 
     override fun onMyLocationButtonClick(): Boolean {
