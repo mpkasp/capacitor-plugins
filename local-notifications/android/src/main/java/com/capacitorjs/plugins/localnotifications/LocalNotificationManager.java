@@ -112,6 +112,7 @@ public class LocalNotificationManager {
             int importance = android.app.NotificationManager.IMPORTANCE_DEFAULT;
             NotificationChannel channel = new NotificationChannel(DEFAULT_NOTIFICATION_CHANNEL_ID, name, importance);
             channel.setDescription(description);
+            channel.enableVibration(true);
             AudioAttributes audioAttributes = new AudioAttributes.Builder()
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .setUsage(AudioAttributes.USAGE_ALARM)
@@ -220,7 +221,7 @@ public class LocalNotificationManager {
         }
 
         mBuilder.setVisibility(NotificationCompat.VISIBILITY_PRIVATE);
-        mBuilder.setOnlyAlertOnce(true);
+        mBuilder.setOnlyAlertOnce(false);
 
         mBuilder.setSmallIcon(localNotification.getSmallIcon(context, getDefaultSmallIcon(context)));
         mBuilder.setLargeIcon(localNotification.getLargeIcon(context));
