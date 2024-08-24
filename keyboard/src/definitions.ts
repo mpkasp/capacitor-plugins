@@ -198,42 +198,50 @@ export interface KeyboardPlugin {
   /**
    * Listen for when the keyboard is about to be shown.
    *
+   * On Android keyboardWillShow and keyboardDidShow fire almost at the same time.
+   *
    * @since 1.0.0
    */
   addListener(
     eventName: 'keyboardWillShow',
     listenerFunc: (info: KeyboardInfo) => void,
-  ): Promise<PluginListenerHandle> & PluginListenerHandle;
+  ): Promise<PluginListenerHandle>;
 
   /**
    * Listen for when the keyboard is shown.
+   *
+   * On Android keyboardWillShow and keyboardDidShow fire almost at the same time.
    *
    * @since 1.0.0
    */
   addListener(
     eventName: 'keyboardDidShow',
     listenerFunc: (info: KeyboardInfo) => void,
-  ): Promise<PluginListenerHandle> & PluginListenerHandle;
+  ): Promise<PluginListenerHandle>;
 
   /**
    * Listen for when the keyboard is about to be hidden.
+   *
+   * On Android keyboardWillHide and keyboardDidHide fire almost at the same time.
    *
    * @since 1.0.0
    */
   addListener(
     eventName: 'keyboardWillHide',
     listenerFunc: () => void,
-  ): Promise<PluginListenerHandle> & PluginListenerHandle;
+  ): Promise<PluginListenerHandle>;
 
   /**
    * Listen for when the keyboard is hidden.
+   *
+   * On Android keyboardWillHide and keyboardDidHide fire almost at the same time.
    *
    * @since 1.0.0
    */
   addListener(
     eventName: 'keyboardDidHide',
     listenerFunc: () => void,
-  ): Promise<PluginListenerHandle> & PluginListenerHandle;
+  ): Promise<PluginListenerHandle>;
 
   /**
    * Remove all native listeners for this plugin.

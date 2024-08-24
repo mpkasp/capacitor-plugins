@@ -215,11 +215,6 @@ public class LocalNotificationManager {
             }
         }
 
-        // make sure scheduled time is shown instead of display time
-        if (localNotification.isScheduled() && localNotification.getSchedule().getAt() != null) {
-            mBuilder.setWhen(localNotification.getSchedule().getAt().getTime()).setShowWhen(true);
-        }
-
         mBuilder.setVisibility(NotificationCompat.VISIBILITY_PRIVATE);
         mBuilder.setOnlyAlertOnce(false);
 
@@ -405,8 +400,12 @@ public class LocalNotificationManager {
         PendingIntent pendingIntent
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+            Logger.warn(
+                "Capacitor/LocalNotification",
+                "Exact alarms not allowed in user settings.  Notification scheduled with non-exact alarm."
+            );
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && schedule.allowWhileIdle()) {
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC, trigger, pendingIntent);
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pendingIntent);
             } else {
                 alarmManager.set(AlarmManager.RTC, trigger, pendingIntent);
             }

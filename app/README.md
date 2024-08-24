@@ -76,10 +76,12 @@ const checkAppLaunchUrl = async () => {
 * [`getState()`](#getstate)
 * [`getLaunchUrl()`](#getlaunchurl)
 * [`minimizeApp()`](#minimizeapp)
-* [`addListener('appStateChange', ...)`](#addlistenerappstatechange)
-* [`addListener('appUrlOpen', ...)`](#addlistenerappurlopen)
-* [`addListener('appRestoredResult', ...)`](#addlistenerapprestoredresult)
-* [`addListener('backButton', ...)`](#addlistenerbackbutton)
+* [`addListener('appStateChange', ...)`](#addlistenerappstatechange-)
+* [`addListener('pause', ...)`](#addlistenerpause-)
+* [`addListener('resume', ...)`](#addlistenerresume-)
+* [`addListener('appUrlOpen', ...)`](#addlistenerappurlopen-)
+* [`addListener('appRestoredResult', ...)`](#addlistenerapprestoredresult-)
+* [`addListener('backButton', ...)`](#addlistenerbackbutton-)
 * [`removeAllListeners()`](#removealllisteners)
 * [Interfaces](#interfaces)
 * [Type Aliases](#type-aliases)
@@ -168,19 +170,73 @@ Only available for Android.
 ### addListener('appStateChange', ...)
 
 ```typescript
-addListener(eventName: 'appStateChange', listenerFunc: StateChangeListener) => Promise<PluginListenerHandle> & PluginListenerHandle
+addListener(eventName: 'appStateChange', listenerFunc: StateChangeListener) => Promise<PluginListenerHandle>
 ```
 
-Listen for changes in the App's active state (whether the app is in the foreground or background)
+Listen for changes in the app or the activity states.
+
+On iOS it's fired when the native [UIApplication.willResignActiveNotification](https://developer.apple.com/documentation/uikit/uiapplication/1622973-willresignactivenotification) and
+[UIApplication.didBecomeActiveNotification](https://developer.apple.com/documentation/uikit/uiapplication/1622953-didbecomeactivenotification) events get fired.
+On Android it's fired when the Capacitor's Activity [onResume](https://developer.android.com/reference/android/app/Activity#onResume()) and [onStop](https://developer.android.com/reference/android/app/Activity#onStop()) methods gets called.
+On Web it's fired when the document's visibilitychange gets fired.
 
 | Param              | Type                                                                |
 | ------------------ | ------------------------------------------------------------------- |
 | **`eventName`**    | <code>'appStateChange'</code>                                       |
 | **`listenerFunc`** | <code><a href="#statechangelistener">StateChangeListener</a></code> |
 
-**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
 
 **Since:** 1.0.0
+
+--------------------
+
+
+### addListener('pause', ...)
+
+```typescript
+addListener(eventName: 'pause', listenerFunc: () => void) => Promise<PluginListenerHandle>
+```
+
+Listen for when the app or the activity are paused.
+
+On iOS it's fired when the native [UIApplication.didEnterBackgroundNotification](https://developer.apple.com/documentation/uikit/uiapplication/1623071-didenterbackgroundnotification) event gets fired.
+On Android it's fired when the Capacitor's Activity [onPause](https://developer.android.com/reference/android/app/Activity#onPause()) method gets called.
+On Web it's fired when the document's visibilitychange gets fired and document.hidden is true.
+
+| Param              | Type                       |
+| ------------------ | -------------------------- |
+| **`eventName`**    | <code>'pause'</code>       |
+| **`listenerFunc`** | <code>() =&gt; void</code> |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+**Since:** 4.1.0
+
+--------------------
+
+
+### addListener('resume', ...)
+
+```typescript
+addListener(eventName: 'resume', listenerFunc: () => void) => Promise<PluginListenerHandle>
+```
+
+Listen for when the app or activity are resumed.
+
+On iOS it's fired when the native [UIApplication.willEnterForegroundNotification](https://developer.apple.com/documentation/uikit/uiapplication/1622944-willenterforegroundnotification) event gets fired.
+On Android it's fired when the Capacitor's Activity [onResume](https://developer.android.com/reference/android/app/Activity#onResume()) method gets called,
+but only after resume has fired first.
+On Web it's fired when the document's visibilitychange gets fired and document.hidden is false.
+
+| Param              | Type                       |
+| ------------------ | -------------------------- |
+| **`eventName`**    | <code>'resume'</code>      |
+| **`listenerFunc`** | <code>() =&gt; void</code> |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+**Since:** 4.1.0
 
 --------------------
 
@@ -188,7 +244,7 @@ Listen for changes in the App's active state (whether the app is in the foregrou
 ### addListener('appUrlOpen', ...)
 
 ```typescript
-addListener(eventName: 'appUrlOpen', listenerFunc: URLOpenListener) => Promise<PluginListenerHandle> & PluginListenerHandle
+addListener(eventName: 'appUrlOpen', listenerFunc: URLOpenListener) => Promise<PluginListenerHandle>
 ```
 
 Listen for url open events for the app. This handles both custom URL scheme links as well
@@ -199,7 +255,7 @@ as URLs your app handles (Universal Links on iOS and App Links on Android)
 | **`eventName`**    | <code>'appUrlOpen'</code>                                   |
 | **`listenerFunc`** | <code><a href="#urlopenlistener">URLOpenListener</a></code> |
 
-**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
 
 **Since:** 1.0.0
 
@@ -209,7 +265,7 @@ as URLs your app handles (Universal Links on iOS and App Links on Android)
 ### addListener('appRestoredResult', ...)
 
 ```typescript
-addListener(eventName: 'appRestoredResult', listenerFunc: RestoredListener) => Promise<PluginListenerHandle> & PluginListenerHandle
+addListener(eventName: 'appRestoredResult', listenerFunc: RestoredListener) => Promise<PluginListenerHandle>
 ```
 
 If the app was launched with previously persisted plugin call data, such as on Android
@@ -239,7 +295,7 @@ Activities (for example, Camera) to have this event and process handled.
 | **`eventName`**    | <code>'appRestoredResult'</code>                              |
 | **`listenerFunc`** | <code><a href="#restoredlistener">RestoredListener</a></code> |
 
-**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
 
 **Since:** 1.0.0
 
@@ -249,7 +305,7 @@ Activities (for example, Camera) to have this event and process handled.
 ### addListener('backButton', ...)
 
 ```typescript
-addListener(eventName: 'backButton', listenerFunc: BackButtonListener) => Promise<PluginListenerHandle> & PluginListenerHandle
+addListener(eventName: 'backButton', listenerFunc: BackButtonListener) => Promise<PluginListenerHandle>
 ```
 
 Listen for the hardware back button event (Android only). Listening for this event will disable the
@@ -261,7 +317,7 @@ If you want to close the app, call `App.exitApp()`.
 | **`eventName`**    | <code>'backButton'</code>                                         |
 | **`listenerFunc`** | <code><a href="#backbuttonlistener">BackButtonListener</a></code> |
 
-**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
 
 **Since:** 1.0.0
 

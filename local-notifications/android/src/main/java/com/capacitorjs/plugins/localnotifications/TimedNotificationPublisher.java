@@ -29,8 +29,20 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        Notification notification = intent.getParcelableExtra(NOTIFICATION_KEY);
-        int id = intent.getIntExtra(LocalNotificationManager.NOTIFICATION_SCHEDULE_ID_INTENT_KEY, Integer.MIN_VALUE);
+//         Notification notification = intent.getParcelableExtra(NOTIFICATION_KEY);
+//         int id = intent.getIntExtra(LocalNotificationManager.NOTIFICATION_SCHEDULE_ID_INTENT_KEY, Integer.MIN_VALUE);
+
+        Notification notification;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notification = intent.getParcelableExtra(NOTIFICATION_KEY, Notification.class);
+        } else {
+            notification = getParcelableExtraLegacy(intent, NOTIFICATION_KEY);
+        }
+
+        notification.when = System.currentTimeMillis();
+
+        int id = intent.getIntExtra(LocalNotificationManager.NOTIFICATION_INTENT_KEY, Integer.MIN_VALUE);
         if (id == Integer.MIN_VALUE) {
             Logger.error(Logger.tags("LN"), "No valid id supplied", null);
         }
@@ -43,11 +55,18 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
         }
     }
 
+    @SuppressWarnings("deprecation")
+    private Notification getParcelableExtraLegacy(Intent intent, String string) {
+        return intent.getParcelableExtra(NOTIFICATION_KEY);
+    }
+
     private boolean rescheduleNotificationIfNeeded(Context context, Intent intent, int id) {
         String dateString = intent.getStringExtra(CRON_KEY);
+
         if (dateString != null) {
             DateMatch date = DateMatch.fromMatchString(dateString);
             AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+
             long trigger = date.nextTrigger(new Date());
             Intent clone = (Intent) intent.clone();
             int flags = PendingIntent.FLAG_CANCEL_CURRENT;
@@ -56,6 +75,10 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
             }
             PendingIntent pendingIntent = PendingIntent.getBroadcast(context, id, clone, flags);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                Logger.warn(
+                    "Capacitor/LocalNotification",
+                    "Exact alarms not allowed in user settings.  Notification scheduled with non-exact alarm."
+                );
                 alarmManager.set(AlarmManager.RTC, trigger, pendingIntent);
             } else {
                 alarmManager.setExact(AlarmManager.RTC, trigger, pendingIntent);

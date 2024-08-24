@@ -13,7 +13,6 @@ npx cap sync
 
 Apple requires privacy descriptions to be specified in `Info.plist` for location information:
 
-- `NSLocationAlwaysUsageDescription` (`Privacy - Location Always Usage Description`)
 - `NSLocationWhenInUseUsageDescription` (`Privacy - Location When In Use Usage Description`)
 
 Read about [Configuring `Info.plist`](https://capacitorjs.com/docs/ios/configuration#configuring-infoplist) in the [iOS Guide](https://capacitorjs.com/docs/ios) for more information on setting iOS permissions in Xcode
@@ -37,7 +36,7 @@ Read about [Setting Permissions](https://capacitorjs.com/docs/android/configurat
 
 This plugin will use the following project variables (defined in your app's `variables.gradle` file):
 
-- `$playServicesLocationVersion` version of `com.google.android.gms:play-services-location` (default: `20.0.0`)
+- `playServicesLocationVersion` version of `com.google.android.gms:play-services-location` (default: `21.1.0`)
 
 ## Example
 
