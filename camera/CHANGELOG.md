@@ -1,7 +1,67 @@
+# ⓘ Plugin migrated
+
+**From version 8.1.0 onwards, this plugin is now hosted in a separate repository. Refer to the [updated CHANGELOG](https://github.com/ionic-team/capacitor-camera/blob/main/CHANGELOG.md).**
+
 # Change Log
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [8.0.2](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@8.0.1...@capacitor/camera@8.0.2) (2026-03-06)
+
+### Bug Fixes
+
+- **camera:** Allow cancelation of sheet in Web, requires pwa-elements 3.4.0 or higher ([#2284](https://github.com/ionic-team/capacitor-plugins/issues/2284)) ([06cf611](https://github.com/ionic-team/capacitor-plugins/commit/06cf611be3822cd41be8a4e314bf4a1b4e9b551d))
+
+## [8.0.1](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@8.0.0...@capacitor/camera@8.0.1) (2026-02-12)
+
+### Bug Fixes
+
+- AGP 9.0 no longer supporting `proguard-android.txt` ([#2468](https://github.com/ionic-team/capacitor-plugins/issues/2468)) ([a8760a9](https://github.com/ionic-team/capacitor-plugins/commit/a8760a989f594bc406d0ec7da58125d17447cae4))
+
+# [8.0.0](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@8.0.0-beta.0...@capacitor/camera@8.0.0) (2025-12-08)
+
+**Note:** Version bump only for package @capacitor/camera
+
+# [8.0.0-beta.0](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@8.0.0-alpha.1...@capacitor/camera@8.0.0-beta.0) (2025-11-14)
+
+**Note:** Version bump only for package @capacitor/camera
+
+# [8.0.0-alpha.1](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@7.0.2...@capacitor/camera@8.0.0-alpha.1) (2025-09-08)
+
+**Note:** Version bump only for package @capacitor/camera
+
+## [7.0.2](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@7.0.1...@capacitor/camera@7.0.2) (2025-08-05)
+
+### Bug Fixes
+
+- **camera:** requestPermissions on Android 13+ ([#2393](https://github.com/ionic-team/capacitor-plugins/issues/2393)) ([4d707a7](https://github.com/ionic-team/capacitor-plugins/commit/4d707a7353de44c9663f661ce869cb99429b1ca5))
+
+## [7.0.1](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@7.0.0...@capacitor/camera@7.0.1) (2025-04-02)
+
+**Note:** Version bump only for package @capacitor/camera
+
+# [7.0.0](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@7.0.0-rc.0...@capacitor/camera@7.0.0) (2025-01-20)
+
+**Note:** Version bump only for package @capacitor/camera
+
+# [7.0.0-rc.0](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@7.0.0-alpha.2...@capacitor/camera@7.0.0-rc.0) (2025-01-13)
+
+**Note:** Version bump only for package @capacitor/camera
+
+# [7.0.0-alpha.2](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@7.0.0-alpha.1...@capacitor/camera@7.0.0-alpha.2) (2024-12-19)
+
+**Note:** Version bump only for package @capacitor/camera
+
+# [7.0.0-alpha.1](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@6.0.2...@capacitor/camera@7.0.0-alpha.1) (2024-12-16)
+
+### Bug Fixes
+
+- **camera:** Android dialog not fully showing when in landscape ([#2276](https://github.com/ionic-team/capacitor-plugins/issues/2276)) ([123193b](https://github.com/ionic-team/capacitor-plugins/commit/123193b9cf19784c69e1fd382516a319779e36a5))
+
+### Features
+
+- **camera:** only request permission to save to the gallery for Android <= 9 ([#2222](https://github.com/ionic-team/capacitor-plugins/issues/2222)) ([30da38e](https://github.com/ionic-team/capacitor-plugins/commit/30da38ee9a92da1c5bbeb301fa6371a43365dfeb))
 
 ## [6.0.2](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/camera@6.0.1...@capacitor/camera@6.0.2) (2024-08-08)
 

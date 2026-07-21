@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The default Capacitor version(s) the plugin should depend on. Latest published in a range will be pulled by the user
-DEFAULT_CAPACITOR_VERSION="[6.0,7.0)"
+DEFAULT_CAPACITOR_VERSION="[8.0,9.0)"
 
 publish_plugin () {
     PLUGIN_PATH=$1
@@ -20,9 +20,8 @@ publish_plugin () {
             # Get latest plugin info from MavenCentral
             PLUGIN_PUBLISHED_URL="https://repo1.maven.org/maven2/com/capacitorjs/$PLUGIN_NAME/maven-metadata.xml"
             PLUGIN_PUBLISHED_DATA=$(curl -s $PLUGIN_PUBLISHED_URL)
-            PLUGIN_PUBLISHED_VERSION="$(perl -ne 'print and last if s/.*<latest>(.*)<\/latest>.*/\1/;' <<< $PLUGIN_PUBLISHED_DATA)"
 
-            if [[ $PLUGIN_VERSION == $PLUGIN_PUBLISHED_VERSION ]]; then
+            if echo "$PLUGIN_PUBLISHED_DATA" | grep -q "<version>$PLUGIN_VERSION</version>"; then
                 printf %"s\n\n" "Duplicate: a published plugin $PLUGIN_NAME exists for version $PLUGIN_VERSION, skipping..."
             else
                 # Make log dir if doesnt exist
@@ -42,7 +41,7 @@ publish_plugin () {
                 if grep --quiet "BUILD SUCCESSFUL" $LOG_OUTPUT; then
                     printf %"s\n\n" "Success: $PLUGIN_NAME published to MavenCentral."
                 else
-                    printf %"s\n\n" "Error publishing $PLUGIN_NAME, check $LOG_OUTPUT for more info! Manual publication review may be necessary at the Sonatype Repository Manager https://s01.oss.sonatype.org/"
+                    printf %"s\n\n" "Error publishing $PLUGIN_NAME, check $LOG_OUTPUT for more info! Manually review and release from the Central Portal may be necessary https://central.sonatype.com/publishing/deployments/"
                     cat $LOG_OUTPUT
                     exit 1
                 fi

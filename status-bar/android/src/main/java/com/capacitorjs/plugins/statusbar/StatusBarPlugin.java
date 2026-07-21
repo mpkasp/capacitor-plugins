@@ -1,5 +1,6 @@
 package com.capacitorjs.plugins.statusbar;
 
+import android.content.res.Configuration;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Logger;
 import com.getcapacitor.Plugin;
@@ -12,15 +13,12 @@ import java.util.Locale;
 @CapacitorPlugin(name = "StatusBar")
 public class StatusBarPlugin extends Plugin {
 
-    public static final String statusBarVisibilityChanged = "statusBarVisibilityChanged";
-    public static final String statusBarOverlayChanged = "statusBarOverlayChanged";
-
     private StatusBar implementation;
 
     @Override
     public void load() {
         StatusBarConfig config = getStatusBarConfig();
-        implementation = new StatusBar(getActivity(), config);
+        implementation = new StatusBar(getActivity(), config, (eventName, info) -> notifyListeners(eventName, toJSObject(info), true));
     }
 
     private StatusBarConfig getStatusBarConfig() {
@@ -52,6 +50,12 @@ public class StatusBarPlugin extends Plugin {
         }
     }
 
+    @Override
+    protected void handleOnConfigurationChanged(Configuration newConfig) {
+        super.handleOnConfigurationChanged(newConfig);
+        implementation.updateStyle();
+    }
+
     @PluginMethod
     public void setStyle(final PluginCall call) {
         final String style = call.getString("style");
@@ -60,13 +64,10 @@ public class StatusBarPlugin extends Plugin {
             return;
         }
 
-        getBridge()
-            .executeOnMainThread(
-                () -> {
-                    implementation.setStyle(style);
-                    call.resolve();
-                }
-            );
+        getBridge().executeOnMainThread(() -> {
+            implementation.setStyle(style);
+            call.resolve();
+        });
     }
 
     @PluginMethod
@@ -77,46 +78,33 @@ public class StatusBarPlugin extends Plugin {
             return;
         }
 
-        getBridge()
-            .executeOnMainThread(
-                () -> {
-                    try {
-                        final int parsedColor = WebColor.parseColor(color.toUpperCase(Locale.ROOT));
-                        implementation.setBackgroundColor(parsedColor);
-                        call.resolve();
-                    } catch (IllegalArgumentException ex) {
-                        call.reject("Invalid color provided. Must be a hex string (ex: #ff0000");
-                    }
-                }
-            );
+        getBridge().executeOnMainThread(() -> {
+            try {
+                final int parsedColor = WebColor.parseColor(color.toUpperCase(Locale.ROOT));
+                implementation.setBackgroundColor(parsedColor);
+                call.resolve();
+            } catch (IllegalArgumentException ex) {
+                call.reject("Invalid color provided. Must be a hex string (ex: #ff0000");
+            }
+        });
     }
 
     @PluginMethod
     public void hide(final PluginCall call) {
         // Hide the status bar.
-        getBridge()
-            .executeOnMainThread(
-                () -> {
-                    implementation.hide();
-                    StatusBarInfo info = implementation.getInfo();
-                    notifyListeners(statusBarVisibilityChanged, toJSObject(info));
-                    call.resolve();
-                }
-            );
+        getBridge().executeOnMainThread(() -> {
+            implementation.hide();
+            call.resolve();
+        });
     }
 
     @PluginMethod
     public void show(final PluginCall call) {
         // Show the status bar.
-        getBridge()
-            .executeOnMainThread(
-                () -> {
-                    implementation.show();
-                    StatusBarInfo info = implementation.getInfo();
-                    notifyListeners(statusBarVisibilityChanged, toJSObject(info));
-                    call.resolve();
-                }
-            );
+        getBridge().executeOnMainThread(() -> {
+            implementation.show();
+            call.resolve();
+        });
     }
 
     @PluginMethod
@@ -127,16 +115,11 @@ public class StatusBarPlugin extends Plugin {
 
     @PluginMethod
     public void setOverlaysWebView(final PluginCall call) {
-        final Boolean overlays = call.getBoolean("overlay", true);
-        getBridge()
-            .executeOnMainThread(
-                () -> {
-                    implementation.setOverlaysWebView(overlays);
-                    StatusBarInfo info = implementation.getInfo();
-                    notifyListeners(statusBarOverlayChanged, toJSObject(info));
-                    call.resolve();
-                }
-            );
+        final Boolean overlay = call.getBoolean("overlay", true);
+        getBridge().executeOnMainThread(() -> {
+            implementation.setOverlaysWebView(overlay);
+            call.resolve();
+        });
     }
 
     private JSObject toJSObject(StatusBarInfo info) {

@@ -1,4 +1,23 @@
+/// <reference types="@capacitor/cli" />
+
 import type { PluginListenerHandle } from '@capacitor/core';
+
+declare module '@capacitor/cli' {
+  export interface PluginsConfig {
+    App?: {
+      /**
+       * Disable the plugin's default back button handling.
+       *
+       * Only available for Android.
+       *
+       * @since 7.1.0
+       * @default false
+       * @example true
+       */
+      disableBackButtonHandler?: boolean;
+    };
+  }
+}
 
 export interface AppInfo {
   /**
@@ -125,10 +144,28 @@ export interface BackButtonListenerEvent {
   canGoBack: boolean;
 }
 
+export interface ToggleBackButtonHandlerOptions {
+  /**
+   * Indicates whether to enable or disable default back button handling.
+   *
+   * @since 7.1.0
+   */
+  enabled: boolean;
+}
+
 export type StateChangeListener = (state: AppState) => void;
 export type URLOpenListener = (event: URLOpenListenerEvent) => void;
 export type RestoredListener = (event: RestoredListenerEvent) => void;
 export type BackButtonListener = (event: BackButtonListenerEvent) => void;
+
+export interface AppLanguageCode {
+  /**
+   * Two or Three character language code.
+   *
+   * @since 8.1.0
+   */
+  value: string;
+}
 
 export interface AppPlugin {
   /**
@@ -172,6 +209,22 @@ export interface AppPlugin {
   minimizeApp(): Promise<void>;
 
   /**
+   * Get the app specific language locale code.
+   *
+   * @since 8.1.0
+   */
+  getAppLanguage(): Promise<AppLanguageCode>;
+
+  /**
+   * Enables or disables the plugin's back button handling during runtime.
+   *
+   * Only available for Android.
+   *
+   * @since 7.1.0
+   */
+  toggleBackButtonHandler(options: ToggleBackButtonHandlerOptions): Promise<void>;
+
+  /**
    * Listen for changes in the app or the activity states.
    *
    * On iOS it's fired when the native [UIApplication.willResignActiveNotification](https://developer.apple.com/documentation/uikit/uiapplication/1622973-willresignactivenotification) and
@@ -181,10 +234,7 @@ export interface AppPlugin {
    *
    * @since 1.0.0
    */
-  addListener(
-    eventName: 'appStateChange',
-    listenerFunc: StateChangeListener,
-  ): Promise<PluginListenerHandle>;
+  addListener(eventName: 'appStateChange', listenerFunc: StateChangeListener): Promise<PluginListenerHandle>;
 
   /**
    * Listen for when the app or the activity are paused.
@@ -195,10 +245,7 @@ export interface AppPlugin {
    *
    * @since 4.1.0
    */
-  addListener(
-    eventName: 'pause',
-    listenerFunc: () => void,
-  ): Promise<PluginListenerHandle>;
+  addListener(eventName: 'pause', listenerFunc: () => void): Promise<PluginListenerHandle>;
 
   /**
    * Listen for when the app or activity are resumed.
@@ -210,10 +257,7 @@ export interface AppPlugin {
    *
    * @since 4.1.0
    */
-  addListener(
-    eventName: 'resume',
-    listenerFunc: () => void,
-  ): Promise<PluginListenerHandle>;
+  addListener(eventName: 'resume', listenerFunc: () => void): Promise<PluginListenerHandle>;
 
   /**
    * Listen for url open events for the app. This handles both custom URL scheme links as well
@@ -221,10 +265,7 @@ export interface AppPlugin {
    *
    * @since 1.0.0
    */
-  addListener(
-    eventName: 'appUrlOpen',
-    listenerFunc: URLOpenListener,
-  ): Promise<PluginListenerHandle>;
+  addListener(eventName: 'appUrlOpen', listenerFunc: URLOpenListener): Promise<PluginListenerHandle>;
 
   /**
    * If the app was launched with previously persisted plugin call data, such as on Android
@@ -251,10 +292,7 @@ export interface AppPlugin {
    *
    * @since 1.0.0
    */
-  addListener(
-    eventName: 'appRestoredResult',
-    listenerFunc: RestoredListener,
-  ): Promise<PluginListenerHandle>;
+  addListener(eventName: 'appRestoredResult', listenerFunc: RestoredListener): Promise<PluginListenerHandle>;
 
   /**
    * Listen for the hardware back button event (Android only). Listening for this event will disable the
@@ -263,10 +301,7 @@ export interface AppPlugin {
    *
    * @since 1.0.0
    */
-  addListener(
-    eventName: 'backButton',
-    listenerFunc: BackButtonListener,
-  ): Promise<PluginListenerHandle>;
+  addListener(eventName: 'backButton', listenerFunc: BackButtonListener): Promise<PluginListenerHandle>;
 
   /**
    * Remove all native listeners for this plugin
@@ -275,15 +310,3 @@ export interface AppPlugin {
    */
   removeAllListeners(): Promise<void>;
 }
-
-/**
- * @deprecated Use `RestoredListenerEvent`.
- * @since 1.0.0
- */
-export type AppRestoredResult = RestoredListenerEvent;
-
-/**
- * @deprecated Use `URLOpenListenerEvent`.
- * @since 1.0.0
- */
-export type AppUrlOpen = URLOpenListenerEvent;

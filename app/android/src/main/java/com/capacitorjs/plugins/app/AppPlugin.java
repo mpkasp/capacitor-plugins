@@ -5,7 +5,9 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.net.Uri;
 import androidx.activity.OnBackPressedCallback;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.pm.PackageInfoCompat;
+import androidx.core.os.LocaleListCompat;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Logger;
 import com.getcapacitor.Plugin;
@@ -13,6 +15,7 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.util.InternalUtils;
+import java.util.Locale;
 
 @CapacitorPlugin(name = "App")
 public class AppPlugin extends Plugin {
@@ -25,26 +28,22 @@ public class AppPlugin extends Plugin {
     private static final String EVENT_RESUME = "resume";
     private boolean hasPausedEver = false;
 
+    private OnBackPressedCallback onBackPressedCallback;
+
     public void load() {
-        bridge
-            .getApp()
-            .setStatusChangeListener(
-                isActive -> {
-                    Logger.debug(getLogTag(), "Firing change: " + isActive);
-                    JSObject data = new JSObject();
-                    data.put("isActive", isActive);
-                    notifyListeners(EVENT_STATE_CHANGE, data, false);
-                }
-            );
-        bridge
-            .getApp()
-            .setAppRestoredListener(
-                result -> {
-                    Logger.debug(getLogTag(), "Firing restored result");
-                    notifyListeners(EVENT_RESTORED_RESULT, result.getWrappedResult(), true);
-                }
-            );
-        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
+        boolean disableBackButtonHandler = getConfig().getBoolean("disableBackButtonHandler", false);
+
+        bridge.getApp().setStatusChangeListener((isActive) -> {
+            Logger.debug(getLogTag(), "Firing change: " + isActive);
+            JSObject data = new JSObject();
+            data.put("isActive", isActive);
+            notifyListeners(EVENT_STATE_CHANGE, data, false);
+        });
+        bridge.getApp().setAppRestoredListener((result) -> {
+            Logger.debug(getLogTag(), "Firing restored result");
+            notifyListeners(EVENT_RESTORED_RESULT, result.getWrappedResult(), true);
+        });
+        this.onBackPressedCallback = new OnBackPressedCallback(!disableBackButtonHandler) {
             @Override
             public void handleOnBackPressed() {
                 if (!hasListeners(EVENT_BACK_BUTTON)) {
@@ -59,7 +58,8 @@ public class AppPlugin extends Plugin {
                 }
             }
         };
-        getActivity().getOnBackPressedDispatcher().addCallback(getActivity(), callback);
+
+        getActivity().getOnBackPressedDispatcher().addCallback(getActivity(), this.onBackPressedCallback);
     }
 
     @PluginMethod
@@ -110,6 +110,28 @@ public class AppPlugin extends Plugin {
     public void minimizeApp(PluginCall call) {
         getActivity().moveTaskToBack(true);
         call.resolve();
+    }
+
+    @PluginMethod
+    public void toggleBackButtonHandler(PluginCall call) {
+        if (this.onBackPressedCallback == null) {
+            call.reject("onBackPressedCallback is not set");
+            return;
+        }
+
+        Boolean enabled = call.getBoolean("enabled");
+
+        this.onBackPressedCallback.setEnabled(enabled);
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void getAppLanguage(PluginCall call) {
+        JSObject ret = new JSObject();
+        LocaleListCompat appLocales = AppCompatDelegate.getApplicationLocales();
+        Locale appLocale = !appLocales.isEmpty() ? appLocales.get(0) : null;
+        ret.put("value", appLocale != null ? appLocale.getLanguage() : Locale.getDefault().getLanguage());
+        call.resolve(ret);
     }
 
     /**

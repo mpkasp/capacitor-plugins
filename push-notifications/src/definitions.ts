@@ -2,7 +2,7 @@
 
 import type { PermissionState, PluginListenerHandle } from '@capacitor/core';
 
-export type PresentationOption = 'badge' | 'sound' | 'alert';
+export type PresentationOption = 'badge' | 'sound' | 'alert' | 'banner' | 'list';
 
 declare module '@capacitor/cli' {
   export interface PluginsConfig {
@@ -14,14 +14,16 @@ declare module '@capacitor/cli' {
        * This is an array of strings you can combine. Possible values in the array are:
        *   - `badge`: badge count on the app icon is updated (default value)
        *   - `sound`: the device will ring/vibrate when the push notification is received
-       *   - `alert`: the push notification is displayed in a native dialog
+       *   - `alert`: **Deprecated on iOS.** Use `banner` and `list` instead. On Android, this value is still used to display the notification.
+       *   - `banner`: the push notification is displayed as a banner. On Android, defaults to the same behavior as `alert`.
+       *   - `list`: the push notification is displayed in the notification center. On Android, defaults to the same behavior as `alert`.
        *
        * An empty array can be provided if none of the options are desired.
        *
        * badge is only available for iOS.
        *
        * @since 1.0.0
-       * @example ["badge", "sound", "alert"]
+       * @example ["badge", "sound", "alert", "banner", "list"]
        */
       presentationOptions: PresentationOption[];
     };
@@ -61,9 +63,7 @@ export interface PushNotificationsPlugin {
    *
    * @since 1.0.0
    */
-  removeDeliveredNotifications(
-    delivered: DeliveredNotifications,
-  ): Promise<void>;
+  removeDeliveredNotifications(delivered: DeliveredNotifications): Promise<void>;
 
   /**
    * Remove all the notifications from the notifications screen.
@@ -132,10 +132,7 @@ export interface PushNotificationsPlugin {
    *
    * @since 1.0.0
    */
-  addListener(
-    eventName: 'registration',
-    listenerFunc: (token: Token) => void,
-  ): Promise<PluginListenerHandle>;
+  addListener(eventName: 'registration', listenerFunc: (token: Token) => void): Promise<PluginListenerHandle>;
 
   /**
    * Called when the push notification registration finished with problems.
@@ -415,7 +412,7 @@ export interface Channel {
  * The importance level. For more details, see the [Android Developer Docs](https://developer.android.com/reference/android/app/NotificationManager#IMPORTANCE_DEFAULT)
  * @since 1.0.0
  */
-export type Importance = 1 | 2 | 3 | 4 | 5;
+export type Importance = 0 | 1 | 2 | 3 | 4 | 5;
 
 /**
  * The notification visibility. For more details, see the [Android Developer Docs](https://developer.android.com/reference/androidx/core/app/NotificationCompat#VISIBILITY_PRIVATE)
