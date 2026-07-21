@@ -3,6 +3,78 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [8.2.1](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@8.2.0...@capacitor/local-notifications@8.2.1) (2026-07-15)
+
+**Note:** Version bump only for package @capacitor/local-notifications
+
+# [8.2.0](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@8.1.0...@capacitor/local-notifications@8.2.0) (2026-05-15)
+
+### Features
+
+- **local-notifications:** add presentationOptions config support for iOS ([#2530](https://github.com/ionic-team/capacitor-plugins/issues/2530)) ([78bea4c](https://github.com/ionic-team/capacitor-plugins/commit/78bea4c325bcaa8b3cd2eacb8c0444b154ea6735))
+
+# [8.1.0](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@8.0.2...@capacitor/local-notifications@8.1.0) (2026-05-07)
+
+### Bug Fixes
+
+- add Importance 0 for notification channels ([#2507](https://github.com/ionic-team/capacitor-plugins/issues/2507)) ([b98c4f9](https://github.com/ionic-team/capacitor-plugins/commit/b98c4f9ee368b66dc92fb54865129df777bf38e5))
+
+### Features
+
+- **local-notifications:** deprecate summaryArgument and add relevanceScore and interruptionLevel ([#2521](https://github.com/ionic-team/capacitor-plugins/issues/2521)) ([fcff6f1](https://github.com/ionic-team/capacitor-plugins/commit/fcff6f11dc8dcbe42c0738e89b4c15239629ab24))
+
+## [8.0.2](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@8.0.1...@capacitor/local-notifications@8.0.2) (2026-03-06)
+
+### Bug Fixes
+
+- **android:** notification Bundles with non-string values ([#2445](https://github.com/ionic-team/capacitor-plugins/issues/2445)) ([2788f81](https://github.com/ionic-team/capacitor-plugins/commit/2788f81d5dfe53e5d72b32e3b724e0f1a41e8373))
+
+## [8.0.1](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@8.0.0...@capacitor/local-notifications@8.0.1) (2026-02-12)
+
+### Bug Fixes
+
+- AGP 9.0 no longer supporting `proguard-android.txt` ([#2468](https://github.com/ionic-team/capacitor-plugins/issues/2468)) ([a8760a9](https://github.com/ionic-team/capacitor-plugins/commit/a8760a989f594bc406d0ec7da58125d17447cae4))
+
+# [8.0.0](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@8.0.0-beta.0...@capacitor/local-notifications@8.0.0) (2025-12-08)
+
+**Note:** Version bump only for package @capacitor/local-notifications
+
+# [8.0.0-beta.0](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@8.0.0-alpha.1...@capacitor/local-notifications@8.0.0-beta.0) (2025-11-14)
+
+**Note:** Version bump only for package @capacitor/local-notifications
+
+# [8.0.0-alpha.1](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@7.0.3...@capacitor/local-notifications@8.0.0-alpha.1) (2025-09-08)
+
+**Note:** Version bump only for package @capacitor/local-notifications
+
+## [7.0.3](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@7.0.2...@capacitor/local-notifications@7.0.3) (2025-09-05)
+
+**Note:** Version bump only for package @capacitor/local-notifications
+
+## [7.0.2](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@7.0.1...@capacitor/local-notifications@7.0.2) (2025-08-05)
+
+**Note:** Version bump only for package @capacitor/local-notifications
+
+## [7.0.1](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@7.0.0...@capacitor/local-notifications@7.0.1) (2025-04-02)
+
+**Note:** Version bump only for package @capacitor/local-notifications
+
+# [7.0.0](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@7.0.0-rc.0...@capacitor/local-notifications@7.0.0) (2025-01-20)
+
+**Note:** Version bump only for package @capacitor/local-notifications
+
+# [7.0.0-rc.0](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@7.0.0-alpha.2...@capacitor/local-notifications@7.0.0-rc.0) (2025-01-13)
+
+**Note:** Version bump only for package @capacitor/local-notifications
+
+# [7.0.0-alpha.2](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@7.0.0-alpha.1...@capacitor/local-notifications@7.0.0-alpha.2) (2024-12-19)
+
+**Note:** Version bump only for package @capacitor/local-notifications
+
+# [7.0.0-alpha.1](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@6.1.0...@capacitor/local-notifications@7.0.0-alpha.1) (2024-12-16)
+
+**Note:** Version bump only for package @capacitor/local-notifications
+
 # [6.1.0](https://github.com/ionic-team/capacitor-plugins/compare/@capacitor/local-notifications@6.0.0...@capacitor/local-notifications@6.1.0) (2024-08-08)
 
 ### Features
