@@ -903,6 +903,20 @@ export interface Schedule {
    * @since 1.0.2
    */
   startAt?: Date;
+
+  /**
+   * Cap the total number of deliveries for an `every` interval schedule. After
+   * `limit` deliveries the interval stops firing. Omit (or use a value <= 0) for
+   * an unlimited interval.
+   *
+   * NOTE: this is distinct from `count`, which is the interval *multiplier*
+   * (`every` × `count`). `limit` bounds how many times the notification fires.
+   *
+   * Android only (fork addition). Used for capped, self-refreshing medication
+   * re-nags: a single same-id notification that re-buzzes every interval, then
+   * stops after `limit` reminders.
+   */
+  limit?: number;
 }
 
 export interface ScheduleOn {

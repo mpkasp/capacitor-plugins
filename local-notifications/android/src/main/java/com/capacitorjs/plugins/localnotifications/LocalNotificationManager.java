@@ -354,7 +354,12 @@ public class LocalNotificationManager {
             return;
         }
 
-        // Schedule at specific intervals
+        // Schedule at specific intervals.
+        // Fork change: instead of an inexact, non-wakeup, uncapped `setRepeating`, schedule a
+        // single *exact* alarm and self-rearm the next one from TimedNotificationPublisher (the
+        // same pattern as the `on:`/CRON_KEY cron path). This makes interval reminders exact and
+        // wake-through-Doze, and — via the optional `limit` — lets an interval stop after N
+        // deliveries, so a single same-id notification can re-buzz then quiet-cap.
         String every = schedule.getEvery();
         if (every != null) {
             Long everyInterval = schedule.getEveryInterval();
@@ -363,14 +368,33 @@ public class LocalNotificationManager {
                 if (startAt == null) {
                     startAt = new Date();
                 }
-                // If start at is old, dont trigger old notifications
-                long startTime = startAt.getTime() + everyInterval;
+                // First fire lands on startAt itself; only roll forward if it is already in the
+                // past, so we never fire for elapsed intervals. (Previously this added one interval
+                // up front, which skipped the first occurrence for a future-dated startAt — wrong
+                // for a burst whose first buzz must be the dose time.)
+                long startTime = startAt.getTime();
                 long today = new Date().getTime();
                 while (startTime < today) {
                     startTime += everyInterval;
                 }
-                Log.d("LN", "Scheduling every notification with start at: " + startAt + "; and startTime: " + startTime + "; inverval: " + everyInterval);
-                alarmManager.setRepeating(AlarmManager.RTC, startTime, everyInterval, pendingIntent);
+                // `limit` (total deliveries) is optional; <= 0 means unlimited. Track deliveries
+                // remaining *after* this first one so the publisher can decrement and stop at 0.
+                int limit = schedule.getLimit();
+                int remainingAfterFirst = (limit > 0) ? (limit - 1) : -1;
+                notificationIntent.putExtra(TimedNotificationPublisher.EVERY_INTERVAL_KEY, (long) everyInterval);
+                notificationIntent.putExtra(TimedNotificationPublisher.EVERY_REMAINING_KEY, remainingAfterFirst);
+                // If the burst also carries an outer `on:` cron, it is a *recurring* capped burst:
+                // after the cap the publisher jumps to the next cron occurrence and resets the
+                // burst, so the reminder keeps firing daily without the app running. Passing the
+                // original limit lets the publisher restore the burst length each occurrence.
+                DateMatch on = schedule.getOn();
+                if (on != null) {
+                    notificationIntent.putExtra(TimedNotificationPublisher.CRON_KEY, on.toMatchString());
+                    notificationIntent.putExtra(TimedNotificationPublisher.EVERY_LIMIT_KEY, limit);
+                }
+                pendingIntent = PendingIntent.getBroadcast(context, request.getId(), notificationIntent, flags);
+                Log.d("LN", "Scheduling every notification start=" + startAt + "; firstTrigger=" + new Date(startTime) + "; interval=" + everyInterval + "; remainingAfterFirst=" + remainingAfterFirst);
+                setExactIfPossible(alarmManager, schedule, startTime, pendingIntent);
             }
             return;
         }

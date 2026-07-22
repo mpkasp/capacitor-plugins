@@ -22,6 +22,12 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
 
     public static String NOTIFICATION_KEY = "NotificationPublisher.notification";
     public static String CRON_KEY = "NotificationPublisher.cron";
+    // Self-rearming `every` interval chain (fork addition): the interval in millis, and the number
+    // of deliveries remaining after the current one (-1 = unlimited). EVERY_LIMIT_KEY holds the
+    // original cap so a recurring capped burst can reset itself at each outer (`on:`) occurrence.
+    public static String EVERY_INTERVAL_KEY = "NotificationPublisher.everyInterval";
+    public static String EVERY_REMAINING_KEY = "NotificationPublisher.everyRemaining";
+    public static String EVERY_LIMIT_KEY = "NotificationPublisher.everyLimit";
 
     /**
      * Restore and present notification
@@ -61,18 +67,65 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
     }
 
     private boolean rescheduleNotificationIfNeeded(Context context, Intent intent, int id) {
-        String dateString = intent.getStringExtra(CRON_KEY);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        int flags = PendingIntent.FLAG_CANCEL_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            flags = flags | PendingIntent.FLAG_MUTABLE;
+        }
 
+        // Interval (`every:`) chain — exact, wake-through-Doze. Checked before the plain cron path
+        // because a capped-burst schedule may ALSO carry an outer `on:` cron for its recurrence.
+        // Behaviour:
+        //   - remaining != 0  -> still inside the burst (or an uncapped interval): step by interval.
+        //   - remaining == 0 + outer cron present -> burst finished: jump to the next dose
+        //     occurrence and RESET the burst. This is what keeps a daily reminder firing even when
+        //     the app never runs and the user never taps — every fire here is an OS alarm event, so
+        //     Monday being ignored does not stop Tuesday.
+        //   - remaining == 0 + no cron (e.g. a snooze burst) -> stop.
+        long interval = intent.getLongExtra(EVERY_INTERVAL_KEY, -1L);
+        if (interval > 0) {
+            int remaining = intent.getIntExtra(EVERY_REMAINING_KEY, -1);
+            String cron = intent.getStringExtra(CRON_KEY);
+            long trigger;
+            int nextRemaining;
+            if (remaining != 0) {
+                trigger = System.currentTimeMillis() + interval;
+                nextRemaining = (remaining > 0) ? remaining - 1 : -1;
+            } else if (cron != null) {
+                trigger = DateMatch.fromMatchString(cron).nextTrigger(new Date());
+                int limit = intent.getIntExtra(EVERY_LIMIT_KEY, 1);
+                nextRemaining = limit - 1; // reset the burst for the next occurrence
+            } else {
+                Logger.debug(Logger.tags("LN"), "notification " + id + " reached its interval limit; not rescheduling");
+                return false;
+            }
+            AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            Intent clone = (Intent) intent.clone();
+            clone.putExtra(EVERY_REMAINING_KEY, nextRemaining);
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(context, id, clone, flags);
+            // Medication reminders: wake through Doze. Fall back to inexact only when the user has
+            // revoked the exact-alarm permission.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                Logger.warn(
+                    "Capacitor/LocalNotification",
+                    "Exact alarms not allowed in user settings.  Interval notification scheduled with non-exact alarm."
+                );
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pendingIntent);
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pendingIntent);
+            }
+            Logger.debug(Logger.tags("LN"), "notification " + id + " (every) will next fire at " + sdf.format(new Date(trigger)) + "; remaining=" + nextRemaining);
+            return true;
+        }
+
+        // Cron (`on:`) chain — recurring wall-clock schedule with no burst.
+        String dateString = intent.getStringExtra(CRON_KEY);
         if (dateString != null) {
             DateMatch date = DateMatch.fromMatchString(dateString);
             AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
             long trigger = date.nextTrigger(new Date());
             Intent clone = (Intent) intent.clone();
-            int flags = PendingIntent.FLAG_CANCEL_CURRENT;
-            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                flags = flags | PendingIntent.FLAG_MUTABLE;
-            }
             PendingIntent pendingIntent = PendingIntent.getBroadcast(context, id, clone, flags);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
                 Logger.warn(
@@ -83,7 +136,6 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
             } else {
                 alarmManager.setExact(AlarmManager.RTC, trigger, pendingIntent);
             }
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
             Logger.debug(Logger.tags("LN"), "notification " + id + " will next fire at " + sdf.format(new Date(trigger)));
             return true;
         }

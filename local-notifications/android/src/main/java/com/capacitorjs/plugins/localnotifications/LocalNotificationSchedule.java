@@ -15,6 +15,9 @@ public class LocalNotificationSchedule {
     private Boolean repeats;
     private String every;
     private Integer count;
+    // Total delivery cap for an `every` interval schedule (<= 0 means unlimited).
+    // Distinct from `count`, which is the interval multiplier. Fork addition.
+    private Integer limit;
 
     private DateMatch on;
     private Date after;
@@ -54,6 +57,7 @@ public class LocalNotificationSchedule {
 
     private void buildCountElement(JSObject schedule) {
         this.count = schedule.getInteger("count", 1);
+        this.limit = schedule.getInteger("limit", -1);
     }
 
     private void buildAtElement(JSObject schedule) throws ParseException {
@@ -144,6 +148,15 @@ public class LocalNotificationSchedule {
 
     public void setCount(int count) {
         this.count = count;
+    }
+
+    // Total delivery cap for an `every` interval schedule; <= 0 means unlimited.
+    public int getLimit() {
+        return limit == null ? -1 : limit;
+    }
+
+    public void setLimit(int limit) {
+        this.limit = limit;
     }
 
     public boolean allowWhileIdle() {
