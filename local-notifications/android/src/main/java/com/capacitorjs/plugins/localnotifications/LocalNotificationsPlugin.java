@@ -53,6 +53,23 @@ public class LocalNotificationsPlugin extends Plugin {
         notificationChannelManager = new NotificationChannelManager(getActivity());
         notificationManager = (NotificationManager) getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
         staticBridge = this.bridge;
+
+        // Cold start: when the app was killed, tapping a notification (or one of its action
+        // buttons) launches the activity through onCreate. Android delivers that intent as the
+        // launch intent, NOT via onNewIntent — so handleOnNewIntent below never fires and the
+        // action would be silently dropped (the app just opens). Process the launch intent here.
+        // notifyListeners(..., true) retains the event until the JS listener attaches, so the
+        // action still lands even though load() runs before JS registers its listener.
+        Intent launchIntent = getActivity().getIntent();
+        if (launchIntent != null && Intent.ACTION_MAIN.equals(launchIntent.getAction())) {
+            JSObject dataJson = manager.handleNotificationActionPerformed(launchIntent, notificationStorage);
+            if (dataJson != null) {
+                notifyListeners("localNotificationActionPerformed", dataJson, true);
+                // Consume the extra so a later activity recreation that re-reads the same launch
+                // intent can't reprocess this tap and double-log.
+                launchIntent.removeExtra(LocalNotificationManager.NOTIFICATION_INTENT_KEY);
+            }
+        }
     }
 
     @Override
