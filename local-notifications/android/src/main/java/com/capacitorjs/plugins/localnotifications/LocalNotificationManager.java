@@ -263,13 +263,19 @@ public class LocalNotificationManager {
             NotificationAction[] actionGroup = storage.getActionGroup(actionTypeId);
             for (NotificationAction notificationAction : actionGroup) {
                 // TODO Add custom icons to actions
-                Intent actionIntent = buildIntent(localNotification, notificationAction.getId());
-                PendingIntent actionPendingIntent = PendingIntent.getActivity(
-                    context,
-                    localNotification.getId() + notificationAction.getId().hashCode(),
-                    actionIntent,
-                    flags
-                );
+                int actionRequestCode = localNotification.getId() + notificationAction.getId().hashCode();
+                PendingIntent actionPendingIntent;
+                if (notificationAction.isBackground()) {
+                    // Fork addition (Phase 3): resolve silently in a native broadcast instead of
+                    // foregrounding the app — the NotificationActionReceiver appends to the outbox
+                    // and dismisses this notification. Carries the same extras the activity intent
+                    // would, so the receiver has the notification id + source payload.
+                    Intent broadcastIntent = buildBroadcastActionIntent(localNotification, notificationAction.getId());
+                    actionPendingIntent = PendingIntent.getBroadcast(context, actionRequestCode, broadcastIntent, flags);
+                } else {
+                    Intent actionIntent = buildIntent(localNotification, notificationAction.getId());
+                    actionPendingIntent = PendingIntent.getActivity(context, actionRequestCode, actionIntent, flags);
+                }
                 NotificationCompat.Action.Builder actionBuilder = new NotificationCompat.Action.Builder(
                     R.drawable.ic_transparent,
                     notificationAction.getTitle(),
@@ -311,6 +317,24 @@ public class LocalNotificationManager {
         intent.setAction(Intent.ACTION_MAIN);
         intent.addCategory(Intent.CATEGORY_LAUNCHER);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.putExtra(NOTIFICATION_INTENT_KEY, localNotification.getId());
+        intent.putExtra(NOTIFICATION_SCHEDULE_ID_INTENT_KEY, localNotification.getNotifyId());
+        intent.putExtra(ACTION_INTENT_KEY, action);
+        intent.putExtra(NOTIFICATION_OBJ_INTENT_KEY, localNotification.getSource());
+        LocalNotificationSchedule schedule = localNotification.getSchedule();
+        intent.putExtra(NOTIFICATION_IS_REMOVABLE_KEY, schedule == null || schedule.isRemovable());
+        return intent;
+    }
+
+    /**
+     * Fork addition (Phase 3): the broadcast counterpart of {@link #buildIntent} for a background
+     * action. Same extras (so the receiver has the notification id, source payload, action id, and
+     * removable flag) but targets {@link NotificationActionReceiver} directly — no activity launch,
+     * no launcher category/flags.
+     */
+    @NonNull
+    private Intent buildBroadcastActionIntent(LocalNotification localNotification, String action) {
+        Intent intent = new Intent(context, NotificationActionReceiver.class);
         intent.putExtra(NOTIFICATION_INTENT_KEY, localNotification.getId());
         intent.putExtra(NOTIFICATION_SCHEDULE_ID_INTENT_KEY, localNotification.getNotifyId());
         intent.putExtra(ACTION_INTENT_KEY, action);

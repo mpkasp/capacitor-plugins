@@ -122,6 +122,42 @@ public class LocalNotificationsPlugin extends Plugin {
         call.resolve(result);
     }
 
+    /**
+     * Fork addition (Phase 3): read the native → JS {@link Outbox} WITHOUT clearing it. Returns
+     * every event appended by background producers (e.g. {@link NotificationActionReceiver}) since
+     * the last ack. JS processes them, then calls {@link #ackOutboxEvents} with the eventIds it
+     * handled — at-least-once so a crash mid-processing re-delivers instead of losing a dose log.
+     * Events carry a stable {@code eventId} for JS-side idempotent dedup.
+     */
+    @PluginMethod
+    public void getOutboxEvents(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("events", Outbox.peekAll(getContext()));
+        call.resolve(result);
+    }
+
+    /**
+     * Fork addition (Phase 3): remove processed events from the outbox (the consumer's ack). Pass
+     * the {@code eventIds} array returned by {@link #getOutboxEvents} once they are durably logged.
+     */
+    @PluginMethod
+    public void ackOutboxEvents(PluginCall call) {
+        JSArray eventIds = call.getArray("eventIds", new JSArray());
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        try {
+            for (Object o : eventIds.toList()) {
+                if (o != null) {
+                    ids.add(o.toString());
+                }
+            }
+        } catch (JSONException e) {
+            call.reject("Invalid eventIds", e);
+            return;
+        }
+        Outbox.remove(getContext(), ids);
+        call.resolve();
+    }
+
     @PluginMethod
     public void registerActionTypes(PluginCall call) {
         JSArray types = call.getArray("types");
@@ -301,6 +337,19 @@ public class LocalNotificationsPlugin extends Plugin {
         LocalNotificationsPlugin localNotificationsPlugin = LocalNotificationsPlugin.getLocalNotificationsInstance();
         if (localNotificationsPlugin != null) {
             localNotificationsPlugin.notifyListeners("localNotificationReceived", notification, true);
+        }
+    }
+
+    /**
+     * Fork addition (Phase 3): nudge JS to drain the outbox promptly when a background action was
+     * resolved while the app happens to be alive. If the app is dead (webView null) this is a
+     * no-op and JS drains on next boot/resume — the outbox is the durable source of truth either
+     * way, so this is only a latency optimization.
+     */
+    public static void fireOutboxAppended() {
+        LocalNotificationsPlugin localNotificationsPlugin = LocalNotificationsPlugin.getLocalNotificationsInstance();
+        if (localNotificationsPlugin != null) {
+            localNotificationsPlugin.notifyListeners("localNotificationOutboxAppended", new JSObject(), true);
         }
     }
 

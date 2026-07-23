@@ -17,13 +17,19 @@ public class NotificationAction {
     private String id;
     private String title;
     private Boolean input;
+    // Fork addition (Phase 3): when true, tapping this action fires a background broadcast
+    // (NotificationActionReceiver) instead of foregrounding the app — so it resolves silently,
+    // including from a bridged Wear OS watch with the phone locked. General capability, not app
+    // domain logic (cf. the exact-alarm fix).
+    private Boolean background;
 
     public NotificationAction() {}
 
-    public NotificationAction(String id, String title, Boolean input) {
+    public NotificationAction(String id, String title, Boolean input, Boolean background) {
         this.id = id;
         this.title = title;
         this.input = input;
+        this.background = background;
     }
 
     public static Map<String, NotificationAction[]> buildTypes(JSArray types) {
@@ -45,6 +51,7 @@ public class NotificationAction {
                         notificationAction.setId(action.getString("id"));
                         notificationAction.setTitle(action.getString("title"));
                         notificationAction.setInput(action.getBool("input"));
+                        notificationAction.setBackground(action.getBool("background"));
                         typesArray[i] = notificationAction;
                     }
                     actionTypeMap.put(actionGroupId, typesArray);
@@ -78,5 +85,13 @@ public class NotificationAction {
 
     public void setInput(Boolean input) {
         this.input = input;
+    }
+
+    public boolean isBackground() {
+        return Boolean.TRUE.equals(background);
+    }
+
+    public void setBackground(Boolean background) {
+        this.background = background;
     }
 }

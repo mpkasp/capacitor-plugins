@@ -7,6 +7,7 @@ import type {
   ListChannelsResult,
   LocalNotificationSchema,
   LocalNotificationsPlugin,
+  OutboxEventsResult,
   PendingResult,
   PermissionStatus,
   ScheduleOptions,
@@ -77,6 +78,15 @@ export class LocalNotificationsWeb extends WebPlugin implements LocalNotificatio
     return {
       notifications: this.pending,
     };
+  }
+
+  async getOutboxEvents(): Promise<OutboxEventsResult> {
+    // No background producers on web — the outbox is always empty.
+    return { events: [] };
+  }
+
+  async ackOutboxEvents(): Promise<void> {
+    // No-op on web.
   }
 
   async registerActionTypes(): Promise<void> {

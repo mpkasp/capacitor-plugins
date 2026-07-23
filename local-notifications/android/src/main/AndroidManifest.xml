@@ -3,6 +3,11 @@
     <application>
         <receiver android:name="com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher" />
         <receiver android:name="com.capacitorjs.plugins.localnotifications.NotificationDismissReceiver" />
+        <!-- Fork addition (Phase 3): background LOG/SKIP action resolve. Not exported — only our
+             own PendingIntents fire it. -->
+        <receiver
+            android:name="com.capacitorjs.plugins.localnotifications.NotificationActionReceiver"
+            android:exported="false" />
         <receiver
             android:name="com.capacitorjs.plugins.localnotifications.LocalNotificationRestoreReceiver"
             android:directBootAware="true"

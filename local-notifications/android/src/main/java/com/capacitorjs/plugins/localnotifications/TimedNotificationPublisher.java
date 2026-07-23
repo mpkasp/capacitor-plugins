@@ -53,12 +53,49 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
             Logger.error(Logger.tags("LN"), "No valid id supplied", null);
         }
         NotificationStorage storage = new NotificationStorage(context);
-        JSObject notificationJson = storage.getSavedNotificationAsJSObject(Integer.toString(id));
-        LocalNotificationsPlugin.fireReceived(notificationJson);
-        notificationManager.notify(id, notification);
-        if (!rescheduleNotificationIfNeeded(context, intent, id)) {
+
+        // Was this dose resolved out-of-band (a background LOG/SKIP action, or later a BLE cap)
+        // since the last fire? consume() read-and-clears the mark, so it only ever affects this
+        // first fire after the resolve. If it was resolved AND this fire is one of the dose's
+        // leftover nags (not the next occurrence), suppress the post and advance the chain straight
+        // to the next occurrence — this is how we skip today's remaining nags while keeping tomorrow.
+        boolean forceAdvance = ResolvedStore.consume(context, id) && isNagOfResolvedDose(intent);
+
+        if (!forceAdvance) {
+            JSObject notificationJson = storage.getSavedNotificationAsJSObject(Integer.toString(id));
+            LocalNotificationsPlugin.fireReceived(notificationJson);
+            notificationManager.notify(id, notification);
+        } else {
+            Logger.debug(Logger.tags("LN"), "notification " + id + " resolved out-of-band; suppressing nag and advancing");
+        }
+        if (!rescheduleNotificationIfNeeded(context, intent, id, forceAdvance)) {
             storage.deleteNotification(Integer.toString(id));
         }
+    }
+
+    /**
+     * Whether a resolved dose's THIS fire is a leftover nag (suppress it) rather than the next
+     * occurrence (keep it). Derived purely from the alarm's own counters — no clock:
+     *   - pure cron / uncapped interval  -> each fire is its own occurrence -> not a nag.
+     *   - capped burst, no cron (snooze) -> no next occurrence to protect -> always a nag (stop).
+     *   - capped burst with cron         -> a nag iff remaining != limit-1 (limit-1 is an
+     *                                       occurrence's first fire, i.e. the next dose).
+     */
+    private boolean isNagOfResolvedDose(Intent intent) {
+        long interval = intent.getLongExtra(EVERY_INTERVAL_KEY, -1L);
+        if (interval <= 0) {
+            return false;
+        }
+        int remaining = intent.getIntExtra(EVERY_REMAINING_KEY, -1);
+        if (remaining < 0) {
+            return false;
+        }
+        String cron = intent.getStringExtra(CRON_KEY);
+        if (cron == null) {
+            return true;
+        }
+        int limit = intent.getIntExtra(EVERY_LIMIT_KEY, remaining + 1);
+        return remaining != (limit - 1);
     }
 
     @SuppressWarnings("deprecation")
@@ -66,7 +103,7 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
         return intent.getParcelableExtra(NOTIFICATION_KEY);
     }
 
-    private boolean rescheduleNotificationIfNeeded(Context context, Intent intent, int id) {
+    private boolean rescheduleNotificationIfNeeded(Context context, Intent intent, int id, boolean forceAdvance) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
         int flags = PendingIntent.FLAG_CANCEL_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -85,6 +122,12 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
         long interval = intent.getLongExtra(EVERY_INTERVAL_KEY, -1L);
         if (interval > 0) {
             int remaining = intent.getIntExtra(EVERY_REMAINING_KEY, -1);
+            if (forceAdvance) {
+                // Resolved out-of-band: abandon any remaining nags and behave as if the burst just
+                // finished — the branches below then jump to the next cron occurrence (daily/weekly
+                // recurrence preserved) or, for a one-shot snooze burst with no cron, stop.
+                remaining = 0;
+            }
             String cron = intent.getStringExtra(CRON_KEY);
             long trigger;
             int nextRemaining;

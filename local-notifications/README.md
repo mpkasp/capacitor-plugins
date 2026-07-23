@@ -95,6 +95,8 @@ If the device has entered [Doze](https://developer.android.com/training/monitori
 
 * [`schedule(...)`](#schedule)
 * [`getPending()`](#getpending)
+* [`getOutboxEvents()`](#getoutboxevents)
+* [`ackOutboxEvents(...)`](#ackoutboxevents)
 * [`registerActionTypes(...)`](#registeractiontypes)
 * [`cancel(...)`](#cancel)
 * [`areEnabled()`](#areenabled)
@@ -110,6 +112,7 @@ If the device has entered [Doze](https://developer.android.com/training/monitori
 * [`checkExactNotificationSetting()`](#checkexactnotificationsetting)
 * [`addListener('localNotificationReceived', ...)`](#addlistenerlocalnotificationreceived-)
 * [`addListener('localNotificationActionPerformed', ...)`](#addlistenerlocalnotificationactionperformed-)
+* [`addListener('localNotificationOutboxAppended', ...)`](#addlistenerlocalnotificationoutboxappended-)
 * [`removeAllListeners()`](#removealllisteners)
 * [Interfaces](#interfaces)
 * [Type Aliases](#type-aliases)
@@ -150,6 +153,44 @@ Get a list of pending notifications.
 **Returns:** <code>Promise&lt;<a href="#pendingresult">PendingResult</a>&gt;</code>
 
 **Since:** 1.0.0
+
+--------------------
+
+
+### getOutboxEvents()
+
+```typescript
+getOutboxEvents() => Promise<OutboxEventsResult>
+```
+
+Fork addition: read the native → JS outbox WITHOUT clearing it.
+
+Returns every event queued by background producers (e.g. a `background: true` action resolved
+while the app was closed) that hasn't been acked yet. Call on boot and on resume, feed the
+events into your single dose-log writer, then ack them with {@link ackOutboxEvents}. Delivery
+is at-least-once (nothing is removed until you ack), so dedup by the stable `eventId`.
+
+Only available for Android; resolves to an empty list elsewhere.
+
+**Returns:** <code>Promise&lt;<a href="#outboxeventsresult">OutboxEventsResult</a>&gt;</code>
+
+--------------------
+
+
+### ackOutboxEvents(...)
+
+```typescript
+ackOutboxEvents(options: { eventIds: string[]; }) => Promise<void>
+```
+
+Fork addition: remove processed events from the outbox (ack). Pass the `eventId`s you have
+durably handled. Safe to call with ids that are already gone.
+
+Only available for Android.
+
+| Param         | Type                                 |
+| ------------- | ------------------------------------ |
+| **`options`** | <code>{ eventIds: string[]; }</code> |
 
 --------------------
 
@@ -415,6 +456,28 @@ Listen for when an action is performed on a notification.
 --------------------
 
 
+### addListener('localNotificationOutboxAppended', ...)
+
+```typescript
+addListener(eventName: 'localNotificationOutboxAppended', listenerFunc: () => void) => Promise<PluginListenerHandle>
+```
+
+Fork addition: fired when a background action (`background: true`) appends an event to the
+outbox while the app is alive — a nudge to drain promptly. Carries no payload; call
+{@link getOutboxEvents}. When the app is dead this never fires; drain on boot/resume instead.
+
+Only available for Android.
+
+| Param              | Type                                           |
+| ------------------ | ---------------------------------------------- |
+| **`eventName`**    | <code>'localNotificationOutboxAppended'</code> |
+| **`listenerFunc`** | <code>() =&gt; void</code>                     |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+--------------------
+
+
 ### removeAllListeners()
 
 ```typescript
@@ -607,6 +670,28 @@ Represents a notification attachment.
 | **`extra`**    | <code>any</code>                              | Set extra data to store within this notification.                    | 1.0.0 |
 
 
+#### OutboxEventsResult
+
+| Prop         | Type                       | Description                                                         |
+| ------------ | -------------------------- | ------------------------------------------------------------------- |
+| **`events`** | <code>OutboxEvent[]</code> | The unacked events. Empty when nothing is pending (or off-Android). |
+
+
+#### OutboxEvent
+
+Fork addition: one durable native → JS event, as returned by
+{@link LocalNotificationsPlugin.getOutboxEvents}. Intentionally domain-agnostic — it carries the
+raw notification source so the consumer can interpret it (extract ids, map the action, etc.).
+
+| Prop                 | Type                | Description                                                                                                                                                    |
+| -------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`eventId`**        | <code>string</code> | Stable unique id for this event, for exactly-once processing (dedup across redelivery).                                                                        |
+| **`notificationId`** | <code>number</code> | The notification id the action was fired from.                                                                                                                 |
+| **`actionId`**       | <code>string</code> | The `actionId` of the action that was tapped (e.g. your `LOG` / `SKIP`).                                                                                       |
+| **`timestamp`**      | <code>number</code> | When the action was resolved natively (ms since epoch).                                                                                                        |
+| **`notification`**   | <code>string</code> | The original notification's serialized source JSON (the `schedule()` payload, including `extra`), so the consumer can recover any domain data it stored there. |
+
+
 #### RegisterActionTypesOptions
 
 | Prop        | Type                      | Description                           | Since |
@@ -633,16 +718,17 @@ A collection of actions.
 
 An action that can be taken when a notification is displayed.
 
-| Prop                         | Type                 | Description                                                                                                                                                                                                     | Since |
-| ---------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| **`id`**                     | <code>string</code>  | The action identifier. Referenced in the `'actionPerformed'` event as `actionId`.                                                                                                                               | 1.0.0 |
-| **`title`**                  | <code>string</code>  | The title text to display for this action.                                                                                                                                                                      | 1.0.0 |
-| **`requiresAuthentication`** | <code>boolean</code> | Sets `authenticationRequired` in the options of the [`UNNotificationAction`](https://developer.apple.com/documentation/usernotifications/unnotificationaction). Only available for iOS.                         | 1.0.0 |
-| **`foreground`**             | <code>boolean</code> | Sets `foreground` in the options of the [`UNNotificationAction`](https://developer.apple.com/documentation/usernotifications/unnotificationaction). Only available for iOS.                                     | 1.0.0 |
-| **`destructive`**            | <code>boolean</code> | Sets `destructive` in the options of the [`UNNotificationAction`](https://developer.apple.com/documentation/usernotifications/unnotificationaction). Only available for iOS.                                    | 1.0.0 |
-| **`input`**                  | <code>boolean</code> | Use a `UNTextInputNotificationAction` instead of a `UNNotificationAction`. Only available for iOS.                                                                                                              | 1.0.0 |
-| **`inputButtonTitle`**       | <code>string</code>  | Sets `textInputButtonTitle` on the [`UNTextInputNotificationAction`](https://developer.apple.com/documentation/usernotifications/untextinputnotificationaction). Only available for iOS when `input` is `true`. | 1.0.0 |
-| **`inputPlaceholder`**       | <code>string</code>  | Sets `textInputPlaceholder` on the [`UNTextInputNotificationAction`](https://developer.apple.com/documentation/usernotifications/untextinputnotificationaction). Only available for iOS when `input` is `true`. | 1.0.0 |
+| Prop                         | Type                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Since |
+| ---------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| **`id`**                     | <code>string</code>  | The action identifier. Referenced in the `'actionPerformed'` event as `actionId`.                                                                                                                                                                                                                                                                                                                                                                                                                      | 1.0.0 |
+| **`title`**                  | <code>string</code>  | The title text to display for this action.                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 1.0.0 |
+| **`requiresAuthentication`** | <code>boolean</code> | Sets `authenticationRequired` in the options of the [`UNNotificationAction`](https://developer.apple.com/documentation/usernotifications/unnotificationaction). Only available for iOS.                                                                                                                                                                                                                                                                                                                | 1.0.0 |
+| **`foreground`**             | <code>boolean</code> | Sets `foreground` in the options of the [`UNNotificationAction`](https://developer.apple.com/documentation/usernotifications/unnotificationaction). Only available for iOS.                                                                                                                                                                                                                                                                                                                            | 1.0.0 |
+| **`background`**             | <code>boolean</code> | Fork addition: resolve this action in the background instead of foregrounding the app. When `true`, tapping the action fires a native broadcast that appends a durable event to the outbox and dismisses the notification — no WebView is launched. Drain the queued events with {@link LocalNotificationsPlugin.drainOutbox} on boot/resume. This is what lets a bridged Wear OS / Pixel Watch tap log silently with the phone locked, rather than opening the phone app. Only available for Android. |       |
+| **`destructive`**            | <code>boolean</code> | Sets `destructive` in the options of the [`UNNotificationAction`](https://developer.apple.com/documentation/usernotifications/unnotificationaction). Only available for iOS.                                                                                                                                                                                                                                                                                                                           | 1.0.0 |
+| **`input`**                  | <code>boolean</code> | Use a `UNTextInputNotificationAction` instead of a `UNNotificationAction`. Only available for iOS.                                                                                                                                                                                                                                                                                                                                                                                                     | 1.0.0 |
+| **`inputButtonTitle`**       | <code>string</code>  | Sets `textInputButtonTitle` on the [`UNTextInputNotificationAction`](https://developer.apple.com/documentation/usernotifications/untextinputnotificationaction). Only available for iOS when `input` is `true`.                                                                                                                                                                                                                                                                                        | 1.0.0 |
+| **`inputPlaceholder`**       | <code>string</code>  | Sets `textInputPlaceholder` on the [`UNTextInputNotificationAction`](https://developer.apple.com/documentation/usernotifications/untextinputnotificationaction). Only available for iOS when `input` is `true`.                                                                                                                                                                                                                                                                                        | 1.0.0 |
 
 
 #### CancelOptions

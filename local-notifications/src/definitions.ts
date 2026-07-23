@@ -85,6 +85,26 @@ export interface LocalNotificationsPlugin {
   getPending(): Promise<PendingResult>;
 
   /**
+   * Fork addition: read the native → JS outbox WITHOUT clearing it.
+   *
+   * Returns every event queued by background producers (e.g. a `background: true` action resolved
+   * while the app was closed) that hasn't been acked yet. Call on boot and on resume, feed the
+   * events into your single dose-log writer, then ack them with {@link ackOutboxEvents}. Delivery
+   * is at-least-once (nothing is removed until you ack), so dedup by the stable `eventId`.
+   *
+   * Only available for Android; resolves to an empty list elsewhere.
+   */
+  getOutboxEvents(): Promise<OutboxEventsResult>;
+
+  /**
+   * Fork addition: remove processed events from the outbox (ack). Pass the `eventId`s you have
+   * durably handled. Safe to call with ids that are already gone.
+   *
+   * Only available for Android.
+   */
+  ackOutboxEvents(options: { eventIds: string[] }): Promise<void>;
+
+  /**
    * Register actions to take when notifications are displayed.
    *
    * Only available for iOS and Android.
@@ -216,6 +236,18 @@ export interface LocalNotificationsPlugin {
   ): Promise<PluginListenerHandle>;
 
   /**
+   * Fork addition: fired when a background action (`background: true`) appends an event to the
+   * outbox while the app is alive — a nudge to drain promptly. Carries no payload; call
+   * {@link getOutboxEvents}. When the app is dead this never fires; drain on boot/resume instead.
+   *
+   * Only available for Android.
+   */
+  addListener(
+    eventName: 'localNotificationOutboxAppended',
+    listenerFunc: () => void,
+  ): Promise<PluginListenerHandle>;
+
+  /**
    * Remove all listeners for this plugin.
    *
    * @since 1.0.0
@@ -271,6 +303,46 @@ export interface RegisterActionTypesOptions {
    * @since 1.0.0
    */
   types: ActionType[];
+}
+
+/**
+ * Fork addition: one durable native → JS event, as returned by
+ * {@link LocalNotificationsPlugin.getOutboxEvents}. Intentionally domain-agnostic — it carries the
+ * raw notification source so the consumer can interpret it (extract ids, map the action, etc.).
+ */
+export interface OutboxEvent {
+  /**
+   * Stable unique id for this event, for exactly-once processing (dedup across redelivery).
+   */
+  eventId: string;
+
+  /**
+   * The notification id the action was fired from.
+   */
+  notificationId: number;
+
+  /**
+   * The `actionId` of the action that was tapped (e.g. your `LOG` / `SKIP`).
+   */
+  actionId: string;
+
+  /**
+   * When the action was resolved natively (ms since epoch).
+   */
+  timestamp: number;
+
+  /**
+   * The original notification's serialized source JSON (the `schedule()` payload, including
+   * `extra`), so the consumer can recover any domain data it stored there.
+   */
+  notification: string;
+}
+
+export interface OutboxEventsResult {
+  /**
+   * The unacked events. Empty when nothing is pending (or off-Android).
+   */
+  events: OutboxEvent[];
 }
 
 export interface CancelOptions {
@@ -396,6 +468,18 @@ export interface Action {
    * @since 1.0.0
    */
   foreground?: boolean;
+
+  /**
+   * Fork addition: resolve this action in the background instead of foregrounding the app.
+   *
+   * When `true`, tapping the action fires a native broadcast that appends a durable event to the
+   * outbox and dismisses the notification — no WebView is launched. Drain the queued events with
+   * {@link LocalNotificationsPlugin.drainOutbox} on boot/resume. This is what lets a bridged Wear
+   * OS / Pixel Watch tap log silently with the phone locked, rather than opening the phone app.
+   *
+   * Only available for Android.
+   */
+  background?: boolean;
 
   /**
    * Sets `destructive` in the options of the
