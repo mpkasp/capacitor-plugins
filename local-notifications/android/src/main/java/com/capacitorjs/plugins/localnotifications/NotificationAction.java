@@ -22,14 +22,23 @@ public class NotificationAction {
     // including from a bridged Wear OS watch with the phone locked. General capability, not app
     // domain logic (cf. the exact-alarm fix).
     private Boolean background;
+    // Fork addition (Phase 3b): a background action that RE-SCHEDULES its own notification this many
+    // minutes out instead of resolving it terminally (i.e. snooze). 0 / null = a plain resolve
+    // (LOG/SKIP). Generic capability — the fork re-arms the notification, JS owns the domain meaning.
+    private Integer snoozeMinutes;
 
     public NotificationAction() {}
 
     public NotificationAction(String id, String title, Boolean input, Boolean background) {
+        this(id, title, input, background, null);
+    }
+
+    public NotificationAction(String id, String title, Boolean input, Boolean background, Integer snoozeMinutes) {
         this.id = id;
         this.title = title;
         this.input = input;
         this.background = background;
+        this.snoozeMinutes = snoozeMinutes;
     }
 
     public static Map<String, NotificationAction[]> buildTypes(JSArray types) {
@@ -52,6 +61,7 @@ public class NotificationAction {
                         notificationAction.setTitle(action.getString("title"));
                         notificationAction.setInput(action.getBool("input"));
                         notificationAction.setBackground(action.getBool("background"));
+                        notificationAction.setSnoozeMinutes(action.getInteger("snoozeMinutes"));
                         typesArray[i] = notificationAction;
                     }
                     actionTypeMap.put(actionGroupId, typesArray);
@@ -93,5 +103,14 @@ public class NotificationAction {
 
     public void setBackground(Boolean background) {
         this.background = background;
+    }
+
+    // Minutes to re-schedule this action's notification (snooze). 0 = a plain resolve, not a snooze.
+    public int getSnoozeMinutes() {
+        return snoozeMinutes == null ? 0 : snoozeMinutes;
+    }
+
+    public void setSnoozeMinutes(Integer snoozeMinutes) {
+        this.snoozeMinutes = snoozeMinutes;
     }
 }

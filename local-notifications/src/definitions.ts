@@ -482,6 +482,17 @@ export interface Action {
   background?: boolean;
 
   /**
+   * Fork addition: makes a `background` action re-schedule its own notification this many minutes
+   * out (a snooze) instead of resolving it. The reminder is re-armed on the companion id supplied in
+   * the notification's `extra.snoozeNotificationId`, reusing the original's burst shape but with no
+   * recurrence, so it fires once more then stops. The action still appends an outbox event (drain it
+   * to reflect the snooze in app state). 0 / unset = a plain resolve.
+   *
+   * Only available for Android.
+   */
+  snoozeMinutes?: number;
+
+  /**
    * Sets `destructive` in the options of the
    * [`UNNotificationAction`](https://developer.apple.com/documentation/usernotifications/unnotificationaction).
    *

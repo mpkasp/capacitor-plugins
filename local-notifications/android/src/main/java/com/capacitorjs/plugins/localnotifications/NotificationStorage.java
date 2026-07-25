@@ -163,6 +163,7 @@ public class NotificationStorage {
                 editor.putString("title" + i, notificationActions[i].getTitle());
                 editor.putBoolean("input" + i, notificationActions[i].isInput());
                 editor.putBoolean("background" + i, notificationActions[i].isBackground());
+                editor.putInt("snoozeMinutes" + i, notificationActions[i].getSnoozeMinutes());
             }
             editor.apply();
         }
@@ -182,7 +183,8 @@ public class NotificationStorage {
             String title = storage.getString("title" + i, "");
             Boolean input = storage.getBoolean("input" + i, false);
             Boolean background = storage.getBoolean("background" + i, false);
-            actions[i] = new NotificationAction(id, title, input, background);
+            int snoozeMinutes = storage.getInt("snoozeMinutes" + i, 0);
+            actions[i] = new NotificationAction(id, title, input, background, snoozeMinutes);
         }
         return actions;
     }

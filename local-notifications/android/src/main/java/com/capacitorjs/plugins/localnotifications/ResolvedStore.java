@@ -37,6 +37,19 @@ public final class ResolvedStore {
     }
 
     /**
+     * Clear any resolved mark for id N. Called when the id is freshly (re)scheduled: a new alarm on
+     * that id starts a new lifecycle, so a mark left over from a prior resolve is stale and must not
+     * suppress the new reminder's first fire. This is the "self-heals when JS reschedules" guarantee —
+     * critical for the snooze companion id, which is deliberately re-armed on the same id and would
+     * otherwise be suppressed by a mark left when the user snoozed that same reminder earlier.
+     */
+    public static void clear(Context context, int id) {
+        synchronized (LOCK) {
+            storage(context).edit().remove(Integer.toString(id)).commit();
+        }
+    }
+
+    /**
      * Read whether id N is marked resolved AND clear the mark in one step. Called once per fire so
      * the mark only ever affects the first fire after a resolve — later fires are normal.
      */

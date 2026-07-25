@@ -47,6 +47,8 @@ public class LocalNotificationManager {
     public static final String ACTION_INTENT_KEY = "LocalNotificationUserAction";
     public static final String NOTIFICATION_IS_REMOVABLE_KEY = "LocalNotificationRepeating";
     public static final String REMOTE_INPUT_KEY = "LocalNotificationRemoteInput";
+    // Fork addition (Phase 3b): minutes a background action re-schedules its notification (snooze).
+    public static final String SNOOZE_MINUTES_INTENT_KEY = "LocalNotificationSnoozeMinutes";
 
     public static final String DEFAULT_NOTIFICATION_CHANNEL_ID = "default";
     private static final String DEFAULT_PRESS_ACTION = "tap";
@@ -246,6 +248,33 @@ public class LocalNotificationManager {
         }
     }
 
+    /**
+     * Fork addition (Phase 3b): build + (re)schedule a notification straight from its source JSON,
+     * reusing the exact {@link #buildNotification} → {@link #triggerScheduledNotification} path a
+     * normal schedule uses — so the background snooze receiver arms its alarm through the same tested
+     * code instead of hand-rolling a fourth AlarmManager copy. The caller passes a source whose `id`
+     * and `schedule` have already been rewritten to the snooze companion id + snooze schedule.
+     * Returns true iff the notification was built and its alarm armed.
+     */
+    public boolean scheduleFromSource(JSObject source) {
+        try {
+            LocalNotification localNotification = LocalNotification.buildNotificationFromJSObject(source);
+            if (localNotification.getId() == null || !localNotification.isScheduled()) {
+                Logger.error(Logger.tags("LN"), "scheduleFromSource: missing id or schedule", null);
+                return false;
+            }
+            // Persist the source under the notification id (as schedule() does) so that when the alarm
+            // fires, TimedNotificationPublisher can read it back for the localNotificationReceived event
+            // and for any re-arm — otherwise a live-app fire would deliver a null payload to JS.
+            storage.appendNotifications(java.util.Collections.singletonList(localNotification));
+            buildNotification(NotificationManagerCompat.from(context), localNotification, null);
+            return true;
+        } catch (Exception e) {
+            Logger.error(Logger.tags("LN"), "scheduleFromSource failed", e);
+            return false;
+        }
+    }
+
     // Create intents for open/dissmis actions
     private void createActionIntents(LocalNotification localNotification, NotificationCompat.Builder mBuilder) {
         // Open intent
@@ -271,6 +300,9 @@ public class LocalNotificationManager {
                     // and dismisses this notification. Carries the same extras the activity intent
                     // would, so the receiver has the notification id + source payload.
                     Intent broadcastIntent = buildBroadcastActionIntent(localNotification, notificationAction.getId());
+                    // A snooze action re-schedules the notification instead of resolving it; the
+                    // receiver needs the delay. 0 for a plain resolve (LOG/SKIP).
+                    broadcastIntent.putExtra(SNOOZE_MINUTES_INTENT_KEY, notificationAction.getSnoozeMinutes());
                     actionPendingIntent = PendingIntent.getBroadcast(context, actionRequestCode, broadcastIntent, flags);
                 } else {
                     Intent actionIntent = buildIntent(localNotification, notificationAction.getId());
@@ -351,6 +383,10 @@ public class LocalNotificationManager {
     // TODO support different AlarmManager.RTC modes depending on priority
     private void triggerScheduledNotification(Notification notification, LocalNotification request) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        // Re-arming this id starts a fresh lifecycle: drop any stale "resolved out-of-band" mark so a
+        // leftover mark (e.g. from an earlier snooze of this same reminder, since the snooze companion
+        // re-uses one id) can't make the new alarm's first fire suppress itself.
+        ResolvedStore.clear(context, request.getId());
         LocalNotificationSchedule schedule = request.getSchedule();
         Intent notificationIntent = new Intent(context, TimedNotificationPublisher.class);
         notificationIntent.putExtra(NOTIFICATION_INTENT_KEY, request.getId());
