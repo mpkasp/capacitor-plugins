@@ -35,8 +35,6 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-//         Notification notification = intent.getParcelableExtra(NOTIFICATION_KEY);
-//         int id = intent.getIntExtra(LocalNotificationManager.NOTIFICATION_SCHEDULE_ID_INTENT_KEY, Integer.MIN_VALUE);
 
         Notification notification;
 
@@ -52,6 +50,10 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
         if (id == Integer.MIN_VALUE) {
             Logger.error(Logger.tags("LN"), "No valid id supplied", null);
         }
+        // The tray entry is keyed by the notify id (scheduleId when JS supplies one), not by the
+        // alarm id: several alarms of the same reminder — a dose and its nags — share one entry, so
+        // each fire refreshes it in place (re-alert + bump to top) instead of stacking a new one.
+        int trayId = intent.getIntExtra(LocalNotificationManager.NOTIFICATION_SCHEDULE_ID_INTENT_KEY, id);
         NotificationStorage storage = new NotificationStorage(context);
 
         // Was this dose resolved out-of-band (a background LOG/SKIP action, or later a BLE cap)
@@ -64,7 +66,7 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
         if (!forceAdvance) {
             JSObject notificationJson = storage.getSavedNotificationAsJSObject(Integer.toString(id));
             LocalNotificationsPlugin.fireReceived(notificationJson);
-            notificationManager.notify(id, notification);
+            notificationManager.notify(trayId, notification);
         } else {
             Logger.debug(Logger.tags("LN"), "notification " + id + " resolved out-of-band; suppressing nag and advancing");
         }

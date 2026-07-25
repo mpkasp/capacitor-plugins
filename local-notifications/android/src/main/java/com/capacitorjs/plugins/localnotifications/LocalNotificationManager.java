@@ -88,7 +88,8 @@ public class LocalNotificationManager {
         }
         String menuAction = data.getStringExtra(LocalNotificationManager.ACTION_INTENT_KEY);
 
-        dismissVisibleNotification(notificationId);
+        // The visible entry is keyed by the notify id — see TimedNotificationPublisher.
+        dismissVisibleNotification(data.getIntExtra(LocalNotificationManager.NOTIFICATION_SCHEDULE_ID_INTENT_KEY, notificationId));
 
         dataJson.put("actionId", menuAction);
         JSONObject request = null;
@@ -512,6 +513,18 @@ public class LocalNotificationManager {
             }
         }
         call.resolve();
+    }
+
+    /**
+     * Fork addition: drop these alarms and their stored records without touching the tray. Used by
+     * {@link NotificationActionReceiver} to stop a resolved dose's remaining nags — the tray entry
+     * is dismissed separately, by notify id.
+     */
+    public void cancelScheduled(List<Integer> notificationIds) {
+        for (Integer id : notificationIds) {
+            cancelTimerForNotification(id);
+            storage.deleteNotification(Integer.toString(id));
+        }
     }
 
     private void cancelTimerForNotification(Integer notificationId) {

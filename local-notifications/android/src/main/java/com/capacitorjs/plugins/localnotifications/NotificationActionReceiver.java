@@ -8,10 +8,13 @@ import com.getcapacitor.CapConfig;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Logger;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
@@ -61,9 +64,11 @@ public class NotificationActionReceiver extends BroadcastReceiver {
         String actionId = intent.getStringExtra(LocalNotificationManager.ACTION_INTENT_KEY);
         String notificationJson = intent.getStringExtra(LocalNotificationManager.NOTIFICATION_OBJ_INTENT_KEY);
         int snoozeMinutes = intent.getIntExtra(LocalNotificationManager.SNOOZE_MINUTES_INTENT_KEY, 0);
+        // The visible entry is keyed by the notify id, not the alarm id — see TimedNotificationPublisher.
+        int trayId = intent.getIntExtra(LocalNotificationManager.NOTIFICATION_SCHEDULE_ID_INTENT_KEY, notificationId);
 
         if (snoozeMinutes > 0) {
-            handleSnooze(context, notificationId, actionId, notificationJson, snoozeMinutes);
+            handleSnooze(context, notificationId, trayId, actionId, notificationJson, snoozeMinutes);
             return;
         }
 
@@ -89,10 +94,10 @@ public class NotificationActionReceiver extends BroadcastReceiver {
             return;
         }
 
-        // 2. Suppress now — stop the current buzz and hand the "skip this dose's remaining nags,
-        //    keep the next occurrence" decision to the alarm chain via a resolved mark.
-        NotificationManagerCompat.from(context).cancel(notificationId); // clear the going-off tray entry
-        ResolvedStore.markResolved(context, notificationId);
+        // 2. Suppress now — clear the tray entry and drop this dose occurrence's remaining nags.
+        //    Only this occurrence: the next dose is a separate set of alarms, untouched.
+        NotificationManagerCompat.from(context).cancel(trayId);
+        cancelRemainingNags(context, notificationJson);
 
         // If the app happens to be alive, nudge JS to drain immediately (prompt foreground UX). When
         // it isn't, this is a no-op and JS drains on next boot/resume.
@@ -114,7 +119,14 @@ public class NotificationActionReceiver extends BroadcastReceiver {
      * a nagging reminder, else a one-shot — and NEVER carries a cron, so the publisher's existing
      * "remaining == 0 + no cron -> stop" terminates it after the snooze fires (no new publisher logic).
      */
-    private void handleSnooze(Context context, int notificationId, String actionId, String notificationJson, int snoozeMinutes) {
+    private void handleSnooze(
+        Context context,
+        int notificationId,
+        int trayId,
+        String actionId,
+        String notificationJson,
+        int snoozeMinutes
+    ) {
         boolean armed = false;
         try {
             JSObject source = new JSObject(notificationJson);
@@ -180,9 +192,38 @@ public class NotificationActionReceiver extends BroadcastReceiver {
             Logger.error(Logger.tags("LN"), "Snoozed but failed to append outbox event for " + notificationId, e);
         }
 
-        NotificationManagerCompat.from(context).cancel(notificationId);
+        NotificationManagerCompat.from(context).cancel(trayId);
         ResolvedStore.markResolved(context, notificationId);
         LocalNotificationsPlugin.fireOutboxAppended();
+    }
+
+    /**
+     * Cancel the alarms of the dose occurrence this notification belongs to, read from
+     * {@code extra.siblingIds} (JS materializes every occurrence as a group of one-shot alarms and
+     * stamps the group into each member). The notification's own id is in the group; cancelling it
+     * is a no-op since it has already fired.
+     *
+     * <p>Best-effort: a failure costs at most the occurrence's remaining nags, bounded by the nag
+     * count, and never affects a later dose.
+     */
+    private void cancelRemainingNags(Context context, String notificationJson) {
+        try {
+            JSObject extra = new JSObject(notificationJson).getJSObject("extra");
+            JSONArray siblingIds = extra != null ? extra.optJSONArray("siblingIds") : null;
+            if (siblingIds == null || siblingIds.length() == 0) {
+                return;
+            }
+            List<Integer> ids = new ArrayList<>();
+            for (int i = 0; i < siblingIds.length(); i++) {
+                ids.add(siblingIds.getInt(i));
+            }
+            LocalNotificationManager manager = new LocalNotificationManager(
+                new NotificationStorage(context), null, context, CapConfig.loadDefault(context));
+            manager.cancelScheduled(ids);
+            Logger.debug(Logger.tags("LN"), "cancelled remaining nags " + ids);
+        } catch (Exception e) {
+            Logger.error(Logger.tags("LN"), "Failed to cancel remaining nags", e);
+        }
     }
 
     private static String formatUtc(long ms) {
