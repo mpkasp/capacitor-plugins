@@ -66,6 +66,13 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
         if (!forceAdvance) {
             JSObject notificationJson = storage.getSavedNotificationAsJSObject(Integer.toString(id));
             LocalNotificationsPlugin.fireReceived(notificationJson);
+            // Cancel-then-notify under the shared tray id so every buzz of a dose re-alerts on
+            // Wear OS. A plain re-notify() of an existing id is treated as an *update* by the Wear
+            // bridge (DUPLICATE_NOTIFICATION_UPDATE) and stays silent, so only the first nag would
+            // buzz the watch. Cancelling first makes the re-post a fresh notification the watch
+            // alerts for, without needing the visible text to differ. cancel() only dismisses the
+            // tray entry; the per-nag alarms are separate AlarmManager PendingIntents, untouched.
+            notificationManager.cancel(trayId);
             notificationManager.notify(trayId, notification);
         } else {
             Logger.debug(Logger.tags("LN"), "notification " + id + " resolved out-of-band; suppressing nag and advancing");
