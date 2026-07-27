@@ -1303,6 +1303,14 @@ export interface Channel {
    * @since 1.0.0
    */
   vibration?: boolean;
+
+  /**
+   * A custom vibration pattern (milliseconds) for notifications posted to this channel,
+   * as alternating off/on durations: `[wait, vibrate, wait, vibrate, ...]`. Setting this
+   * enables vibration regardless of `vibration`. Android O+ only; the pattern is frozen at
+   * channel creation, so change the channel id to apply a new one to existing installs.
+   */
+  vibrationPattern?: number[];
 }
 
 /**

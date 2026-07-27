@@ -36,6 +36,7 @@ public class NotificationChannelManager {
     private static String CHANNEL_VISIBILITY = "visibility";
     private static String CHANNEL_SOUND = "sound";
     private static String CHANNEL_VIBRATE = "vibration";
+    private static String CHANNEL_VIBRATION_PATTERN = "vibrationPattern";
     private static String CHANNEL_USE_LIGHTS = "lights";
     private static String CHANNEL_LIGHT_COLOR = "lightColor";
 
@@ -60,6 +61,10 @@ public class NotificationChannelManager {
             channel.put(CHANNEL_VISIBILITY, call.getInt(CHANNEL_VISIBILITY, NotificationCompat.VISIBILITY_PUBLIC));
             channel.put(CHANNEL_SOUND, call.getString(CHANNEL_SOUND, null));
             channel.put(CHANNEL_VIBRATE, call.getBoolean(CHANNEL_VIBRATE, false));
+            JSArray vibrationPattern = call.getArray(CHANNEL_VIBRATION_PATTERN, null);
+            if (vibrationPattern != null) {
+                channel.put(CHANNEL_VIBRATION_PATTERN, vibrationPattern);
+            }
             channel.put(CHANNEL_USE_LIGHTS, call.getBoolean(CHANNEL_USE_LIGHTS, false));
             channel.put(CHANNEL_LIGHT_COLOR, call.getString(CHANNEL_LIGHT_COLOR, null));
             createChannel(channel);
@@ -79,6 +84,11 @@ public class NotificationChannelManager {
             notificationChannel.setDescription(channel.getString(CHANNEL_DESCRIPTION));
             notificationChannel.setLockscreenVisibility(channel.getInteger(CHANNEL_VISIBILITY));
             notificationChannel.enableVibration(channel.getBool(CHANNEL_VIBRATE));
+            long[] vibrationPattern = parseVibrationPattern(channel);
+            if (vibrationPattern != null) {
+                notificationChannel.setVibrationPattern(vibrationPattern);
+                notificationChannel.enableVibration(true);
+            }
             notificationChannel.enableLights(channel.getBool(CHANNEL_USE_LIGHTS));
             String lightColor = channel.getString(CHANNEL_LIGHT_COLOR);
             if (lightColor != null) {
@@ -102,6 +112,20 @@ public class NotificationChannelManager {
             }
             notificationManager.createNotificationChannel(notificationChannel);
         }
+    }
+
+    // Read the optional `vibrationPattern` array off the channel config into the long[] millis
+    // pattern NotificationChannel.setVibrationPattern expects. Null when absent or empty.
+    private long[] parseVibrationPattern(JSObject channel) {
+        org.json.JSONArray pattern = channel.optJSONArray(CHANNEL_VIBRATION_PATTERN);
+        if (pattern == null || pattern.length() == 0) {
+            return null;
+        }
+        long[] result = new long[pattern.length()];
+        for (int i = 0; i < pattern.length(); i++) {
+            result[i] = pattern.optLong(i, 0L);
+        }
+        return result;
     }
 
     public void deleteChannel(PluginCall call) {
