@@ -113,7 +113,10 @@ public class NotificationActionReceiver extends BroadcastReceiver {
      *   1. Arm the snooze alarm first. If that fails, do nothing — leave the primary nagging so a
      *      missed snooze never silences the dose.
      *   2. Only then append the outbox event (JS -> notificationSnoozedUntil), clear the tray, and
-     *      mark the primary resolved so its chain skips today's remaining nags while keeping tomorrow.
+     *      cancel this occurrence's remaining nags (via {@code extra.siblingIds}) so the snoozed dose
+     *      goes quiet until the companion fires — the same suppression LOG/SKIP use. {@code
+     *      ResolvedStore.markResolved} stays as a belt-and-suspenders in case the alarm already
+     *      re-armed between fire and cancel.
      *
      * The companion notification reuses the primary's own burst shape (every/count/limit) when it was
      * a nagging reminder, else a one-shot — and NEVER carries a cron, so the publisher's existing
@@ -193,15 +196,17 @@ public class NotificationActionReceiver extends BroadcastReceiver {
         }
 
         NotificationManagerCompat.from(context).cancel(trayId);
+        cancelRemainingNags(context, notificationJson);
         ResolvedStore.markResolved(context, notificationId);
         LocalNotificationsPlugin.fireOutboxAppended();
     }
 
     /**
      * Cancel the alarms of the dose occurrence this notification belongs to, read from
-     * {@code extra.siblingIds} (JS materializes every occurrence as a group of one-shot alarms and
-     * stamps the group into each member). The notification's own id is in the group; cancelling it
-     * is a no-op since it has already fired.
+     * {@code extra.siblingIds}. JS materializes each occurrence as a single self-rearming capped
+     * burst (one alarm that re-arms its own next nag up to {@code limit}), so {@code siblingIds}
+     * currently holds just that one alarm id; cancelling it stops the whole remaining burst. The
+     * array shape is kept so this stays correct if an occurrence is ever split into multiple alarms.
      *
      * <p>Best-effort: a failure costs at most the occurrence's remaining nags, bounded by the nag
      * count, and never affects a later dose.
