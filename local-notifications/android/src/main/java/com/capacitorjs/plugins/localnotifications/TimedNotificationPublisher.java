@@ -56,6 +56,20 @@ public class TimedNotificationPublisher extends BroadcastReceiver {
         int trayId = intent.getIntExtra(LocalNotificationManager.NOTIFICATION_SCHEDULE_ID_INTENT_KEY, id);
         NotificationStorage storage = new NotificationStorage(context);
 
+        // A self-rearming nag burst re-arms from THIS intent's extras, independent of storage. If JS
+        // cancelled the notification (LocalNotifications.cancel removes it from storage AND cancels
+        // the pending alarm) but this fire's broadcast was already dispatched, honoring only the
+        // alarm-cancel would let the burst re-arm its next buzz from the intent and run out its
+        // remaining nags — storage is now gone, so JS can never see it again to re-cancel. Result:
+        // "cancelled but still nagging" (e.g. switching a medicine to As Needed, or logging a dose,
+        // yet the remaining nags keep firing). Storage is the source of truth for "still scheduled":
+        // if the id is absent, treat this fire as stale — post nothing and DON'T re-arm. Reboot
+        // restore re-populates storage before re-arming, so a legitimately pending burst is unaffected.
+        if (storage.getSavedNotificationAsJSObject(Integer.toString(id)) == null) {
+            Logger.debug(Logger.tags("LN"), "notification " + id + " not in storage (cancelled); skipping post and reschedule");
+            return;
+        }
+
         // Was this dose resolved out-of-band (a background LOG/SKIP action, or later a BLE cap)
         // since the last fire? consume() read-and-clears the mark, so it only ever affects this
         // first fire after the resolve. If it was resolved AND this fire is one of the dose's
