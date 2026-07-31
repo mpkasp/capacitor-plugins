@@ -341,12 +341,26 @@ public class LocalNotificationsPlugin extends Plugin {
     }
 
     /**
-     * Fork addition (Phase 3): nudge JS to drain the outbox promptly when a background action was
-     * resolved while the app happens to be alive. If the app is dead (webView null) this is a
-     * no-op and JS drains on next boot/resume — the outbox is the durable source of truth either
-     * way, so this is only a latency optimization.
+     * Domain-agnostic action for the native "outbox appended" announcement (see below). App-side
+     * listeners (e.g. a WorkManager forwarder) register a manifest receiver for this.
      */
-    public static void fireOutboxAppended() {
+    public static final String ACTION_OUTBOX_APPENDED = "com.capacitorjs.plugins.localnotifications.OUTBOX_APPENDED";
+
+    /**
+     * Fork addition (Phase 3): announce that a background action was appended to the outbox.
+     *
+     * Two channels, because the app may or may not be alive:
+     *  - A same-app broadcast (setPackage-scoped) so a manifest-registered receiver runs even when the
+     *    app process was dead — this is what lets a killed-app LOG/SKIP kick off cloud forwarding
+     *    immediately instead of waiting for the next app open or the periodic job.
+     *  - If the WebView is alive, also nudge JS to drain now (prompt foreground UX). When it isn't,
+     *    that half is a no-op and JS drains on next boot/resume.
+     * The outbox is the durable source of truth either way, so both are latency optimizations.
+     */
+    public static void fireOutboxAppended(Context context) {
+        if (context != null) {
+            context.sendBroadcast(new Intent(ACTION_OUTBOX_APPENDED).setPackage(context.getPackageName()));
+        }
         LocalNotificationsPlugin localNotificationsPlugin = LocalNotificationsPlugin.getLocalNotificationsInstance();
         if (localNotificationsPlugin != null) {
             localNotificationsPlugin.notifyListeners("localNotificationOutboxAppended", new JSObject(), true);

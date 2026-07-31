@@ -99,9 +99,9 @@ public class NotificationActionReceiver extends BroadcastReceiver {
         NotificationManagerCompat.from(context).cancel(trayId);
         cancelRemainingNags(context, notificationJson);
 
-        // If the app happens to be alive, nudge JS to drain immediately (prompt foreground UX). When
-        // it isn't, this is a no-op and JS drains on next boot/resume.
-        LocalNotificationsPlugin.fireOutboxAppended();
+        // Announce the append: wake an app-side forwarder even if the app is dead, and (if alive)
+        // nudge JS to drain immediately. See LocalNotificationsPlugin.fireOutboxAppended.
+        LocalNotificationsPlugin.fireOutboxAppended(context);
     }
 
     /**
@@ -198,7 +198,7 @@ public class NotificationActionReceiver extends BroadcastReceiver {
         NotificationManagerCompat.from(context).cancel(trayId);
         cancelRemainingNags(context, notificationJson);
         ResolvedStore.markResolved(context, notificationId);
-        LocalNotificationsPlugin.fireOutboxAppended();
+        LocalNotificationsPlugin.fireOutboxAppended(context);
     }
 
     /**
